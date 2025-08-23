@@ -22,9 +22,8 @@ public class PlayerController : MonoBehaviour
 
     //一度に回転できる角度
     private int limitRot = 90;
-
-    //変更前のz軸の角度
-    private float beforeRotZ = 0;
+    //回転時の角度の変化量
+    private float rotAmountChange = 0f;
 
     /// <summary>
     /// プレイヤーの方向
@@ -35,7 +34,7 @@ public class PlayerController : MonoBehaviour
         left,
     }
 
-    [SerializeField, Header("プレイヤー　開始時の向いてる方向")] private PlayerDire_Mode startDire = PlayerDire_Mode.right;
+    [SerializeField, Header("プレイヤーの向いてる方向")] private PlayerDire_Mode nowDire = PlayerDire_Mode.right;
 
     //回転時の中心座標
     private Vector2 saveRotPos;
@@ -56,7 +55,7 @@ public class PlayerController : MonoBehaviour
         gravityChanger.SetGravityChange(playerRB);
 
         //開始時のプレイヤーの向いてる方向を設定
-        PlayerDirection(startDire);
+        PlayerDirection(nowDire);
     }
 
     private void Update()
@@ -74,10 +73,9 @@ public class PlayerController : MonoBehaviour
         //回転中か空中では移動しない
         if (!CheckNowRotate() && !CheckNowAir())
         {
+            Debug.Log("移動中");
             //移動処理
             PlayerMove();
-            //空中になる前の角度を取得
-            beforeRotZ = RotPoint.localEulerAngles.z;
         }
         else
         {
@@ -88,15 +86,31 @@ public class PlayerController : MonoBehaviour
                 //回転位置用オブジェクトをプレイヤーの親オブジェクトに
                 this.transform.parent = RotPoint;
                 isRot = true;
+
+                //プレイヤーが左を向いてる状態だったら
+                if (nowDire == PlayerDire_Mode.left)
+                {
+                    rotAmountChange = limitRot;
+                }
             }
             //回転処理
             PlayerRotate();
         }
+
         //重力の変更の有無
         gravityChanger.GravityChange(CheckUseGravity());
-
         //重力用の更新
         gravityChanger.GravityUpdate();
+
+        //重力の方向設定
+        Vector2 gravityDire = -this.transform.up;
+        //小数点以下を切り捨て
+        gravityDire.x = (int) gravityDire.x;
+        gravityDire.y = (int)gravityDire.y;
+
+        //重力の方向変更
+        gravityChanger.ChangeGravityDirection(gravityDire);
+
 
     }
 
@@ -142,7 +156,7 @@ public class PlayerController : MonoBehaviour
             //マイナスをなくして、右向きにする
             plSize.x = Mathf.Abs(plSize.x);
         }
-        
+        nowDire = plDire;
         this.transform.localScale = plSize;
     }
 
@@ -163,14 +177,16 @@ public class PlayerController : MonoBehaviour
     /// <returns>false=地面にいる / true=空中にいる</returns>
     private bool CheckNowAir()
     {
+        //レイの長さ
+        float duration = 0.7f;
         //レイ　プレイヤーの中心から下方向に向けて
         Ray2D ray = new Ray2D(this.transform.position, -this.transform.up);
 
         //レイ表示
-        Debug.DrawRay(ray.origin, ray.direction * 0.6f, Color.green);
+        Debug.DrawRay(ray.origin, ray.direction * duration, Color.green);
 
         //レイがオブジェクトを取得した個数分ループ
-        foreach (RaycastHit2D hit in Physics2D.RaycastAll(ray.origin, ray.direction, 0.6f))
+        foreach (RaycastHit2D hit in Physics2D.RaycastAll(ray.origin, ray.direction, duration))
         {
             //オブジェクトと接触しているとき
             if (hit.collider)
@@ -185,13 +201,13 @@ public class PlayerController : MonoBehaviour
                         this.transform.parent = null;
                         //回転時の中心座標を更新
                         saveRotPos = hit.point;
-                        //回転開始フラグをオフに
                         isRot = false;
                     }
                     return false;
                 }
             }
         }
+
         return true;
     }
 
@@ -202,13 +218,15 @@ public class PlayerController : MonoBehaviour
     private bool CheckUseGravity()
     {
         //現在のz軸の角度を取得
-        float nowRotZ = RotPoint.localEulerAngles.z;
+        float nowRotZ = (int)this.transform.localEulerAngles.z;
 
         //角度が下向き以外の時
         if(nowRotZ % 360 != 0)
         {
+            Debug.Log("疑似重力");
             return true;
         }
+        Debug.Log("通常重力");
         return false;
     }
 
@@ -217,47 +235,68 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void PlayerRotate()
     {
+        StartCoroutine(Test());
+    }
+
+    private IEnumerator Test()
+    {
+        //重力の方向設定
+        Vector2 gravityDire = -this.transform.up;
+        //小数点以下を切り捨て
+        gravityDire.x = Mathf.FloorToInt(gravityDire.x);
+        gravityDire.y = Mathf.FloorToInt(gravityDire.y);
+
         //重力の方向変更
-        gravityChanger.ChangeGravityDirection(-this.transform.up);
+        gravityChanger.ChangeGravityDirection(gravityDire);
 
         //回転スピード
-        float rotSpeed = limitRot / rotationTime * Time.deltaTime;
-        //現在の角度を取得
-        Vector3 PLRot = RotPoint.localEulerAngles;
+        float rotSpeed = Mathf.Floor((limitRot / rotationTime * Time.deltaTime) * 100) / 100;
 
-        //移動キーが押されてる時
-        //Dキー(進む)が押されてる時
-        if (Input.GetKey(KeyCode.D))
+        //回転処理
+        //右向いてる時
+        if (nowDire == PlayerDire_Mode.right)
         {
-            //角度が一度に回転できる量以内なら
-            if (PLRot.z > beforeRotZ - limitRot)
-            {
-                PLRot.z -= rotSpeed;
-            }
-            //一度に回転できる量を超えた時
-            else
-            {
-                
-                PLRot.z = beforeRotZ - limitRot;
-            }
-        }
-        //Aキー(戻る)が押されてる時
-        else if (Input.GetKey(KeyCode.A))
-        {
-            //角度が一度に回転できる量以内なら
-            if (PLRot.z < beforeRotZ)
-            {
-                PLRot.z += rotSpeed;
-            }
-            //一度に回転できる量を超えた時
-            else
-            {
-                PLRot.z = beforeRotZ;
-            }
-        }
-        //角度を変更
-        RotPoint.localEulerAngles = PLRot;
+            //while (rotAmountChange <= limitRot)
+            //{
+            //    //現在の角度を取得
+            //    Vector3 PLRot = RotPoint.localEulerAngles;
 
+            //    PLRot.z += -rotSpeed;
+            //    rotAmountChange += rotSpeed;
+
+            //    //角度を変更
+            //    RotPoint.localEulerAngles = PLRot;
+
+            //    yield return null;
+            //}
+
+            Vector3 PLRot = RotPoint.localEulerAngles;
+            PLRot.z = Mathf.FloorToInt(PLRot.z) - 90;
+            RotPoint.localEulerAngles = PLRot;
+        }
+        //左向きの時
+        else if (nowDire == PlayerDire_Mode.left)
+        {
+            //while (rotAmountChange <= limitRot)
+            //{
+            //    //現在の角度を取得
+            //    Vector3 PLRot = RotPoint.localEulerAngles;
+
+            //    PLRot.z += rotSpeed;
+            //    rotAmountChange += rotSpeed;
+
+            //    //角度を変更
+            //    RotPoint.localEulerAngles = PLRot;
+
+            //    yield return null;
+            //}
+
+            Vector3 PLRot = RotPoint.localEulerAngles;
+            PLRot.z = Mathf.FloorToInt(PLRot.z) + 90;
+            RotPoint.localEulerAngles = PLRot;
+        }
+
+        yield return null;
     }
 
     /// <summary>
@@ -280,6 +319,7 @@ public class PlayerController : MonoBehaviour
         }
         //移動できるようにする
         playerRB.constraints = RigidbodyConstraints2D.None;
+        rotAmountChange = 0f;
         Debug.Log("回転していない");
         //回転してない
         return false; ;

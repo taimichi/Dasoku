@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -25,7 +23,6 @@ public class LocalGravityChanger
         if (rb != null)
         {
             //疑似重力
-            //反転させた通常重力分の力を加えることで、通常の重力を打ち消す
             rb.AddForce(gravityVec * gravityStrength * rb.mass);
         }
     }
