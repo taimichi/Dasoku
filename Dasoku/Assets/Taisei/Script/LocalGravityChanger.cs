@@ -6,10 +6,10 @@ using UnityEngine;
 public class LocalGravityChanger
 {
     private Rigidbody2D rb;
-    //新重力の方向
+    //疑似重力の方向
     private Vector2 gravityVec;
 
-    //重力を変更するかどうか
+    //疑似重力を使用するかどうか
     private bool isGravity = false;
 
     //重力の強さ
@@ -20,6 +20,7 @@ public class LocalGravityChanger
     /// </summary>
     private void UseGravity()
     {
+        //nullチェック
         if (rb != null)
         {
             //疑似重力
