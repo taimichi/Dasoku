@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// オブジェクトごとに重力を変更するためのクラス
+/// オブジェクトごとに重力を変更するためのスクリプト
 /// </summary>
 public class LocalGravityChanger
 {

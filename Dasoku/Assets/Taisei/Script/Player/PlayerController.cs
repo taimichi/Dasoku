@@ -3,42 +3,71 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
+//プレイヤーに関するスクリプト(操作など)
 public class PlayerController : MonoBehaviour
 {
+    //プレイヤーデータ
+    [SerializeField] private PlayerData PlData;
+
     //プレイヤーのコライダー
     private BoxCollider2D box;
 
     //プレイヤーのリジッドボディ
     private Rigidbody2D playerRB;
 
+    //地面用のレイヤー
+    [SerializeField, Tooltip("地面のレイヤー")] private LayerMask groundLayer;
+
+    /// <summary>
+    /// プレイヤーの方向
+    /// </summary>
+    private enum PlayerDire_Mode
+    {
+        normal,
+        right,
+        left,
+    }
+    //現在のプレイヤーの向いてる方向
+    private PlayerDire_Mode nowDire = PlayerDire_Mode.right;
+
     #region 移動関連
-    //プレイヤーの基礎速度
-    [SerializeField, Header("基礎速度")] private float basicSpeed = 1.0f;
-    //プレイヤーの移動速度
+    [Header("移動関連")]
+    //速度上限
+    [SerializeField] private Vector2 maxVelocity = new Vector2(20, 20);
+
+    //最終的なプレイヤーの移動速度
     private float plSpeed = 1.0f;
+
     //プレイヤーの移動方向
     private Vector2 plVec;
     #endregion
 
     #region 回転関連
-    //地面用のレイヤー
-    [SerializeField] private LayerMask groundLayer;
+    [Header("回転関連")]
+    //最終的なプレイヤーの回転速度
+    private float plRotSpeed = 180f;
+
     //一度に回転できる角度
     private float limitRot = 90f;
-    //１秒に何度回転する量
-    [SerializeField, Header("1秒に回転する量")] private float rotSpeed = 90f;
+
     //回転する際の支点
     private Vector3 pivotPos;
+
     //どこまで回転したか
     private float rotateAmount = 0f;
+
     //回転するかどうか
     private bool isRot = false;
+
     //回転位置の取得用のオブジェクト
-    [SerializeField] private Transform pivotPoint;
+    [SerializeField, Header("回転位置")] private Transform pivotPoint;
+
     //レイがはみ出た座標保持用
     private Vector3 rayOut_savePos;
+
     //レイがはみ出したかどうか
     private bool isRayOut = false;
+
     /// <summary>
     /// 回転に関するプレイヤーの状態
     /// </summary>
@@ -48,10 +77,13 @@ public class PlayerController : MonoBehaviour
         rot,        //回転中
         finish,     //回転終了
     }
+
     //現在の回転関連のプレイヤーの状態
     private PlayerRot_Mode nowRot = PlayerRot_Mode.none;
+
     //初めて回転モードに入った時のプレイヤーの向いてる方向
     private PlayerDire_Mode startRotDire = PlayerDire_Mode.normal;
+
     //初めて回転モードに入ったか
     private bool isStartRotDire = false;
 
@@ -68,20 +100,65 @@ public class PlayerController : MonoBehaviour
 
     #endregion
 
+    #region 胴体関連
+    [Header("胴体関連")]
+    [Tooltip("胴体隙間")] public float segmentSpacing = 0.5f;
+
+    [Tooltip("胴体の更新距離")] public float pointSpacing = 0.04f;
+
+    [Tooltip("胴体のプレハブ")] public Transform bodyPrefab;
+
+    //生成した胴体のリスト
+    public List<Transform> segments = new List<Transform>();
+
+    //座標の履歴
+    private List<Vector3> posHistory = new List<Vector3>();
+
+    //回転値の履歴
+    private List<Vector3> rotHistory = new List<Vector3>();
+
+    /// <summary>
+    /// 保持する履歴の最大数
+    /// </summary>
+    private int MaxHistoryCount
+    {
+        get
+        {
+            //胴体が追従する距離分 + 少し余裕
+            return (segments.Count + 10) * Mathf.RoundToInt(segmentSpacing / pointSpacing);
+        }
+    }
+
+    private float groundCheckDistance = 0.2f;
+    private bool isAllBodyGroundCheck = false;
+    #endregion
+
     //重力操作用スクリプト
     private LocalGravityChanger gravityChanger = new LocalGravityChanger();
 
-    /// <summary>
-    /// プレイヤーの方向
-    /// </summary>
-    private enum PlayerDire_Mode
+    private void Awake()
     {
-        normal,
-        right,
-        left,
-    }
-    [SerializeField, Header("プレイヤーの向いてる方向")] private PlayerDire_Mode nowDire = PlayerDire_Mode.right;
+        //開始時の座標と回転値を履歴に追加
+        posHistory.Add(this.transform.position);
+        rotHistory.Add(this.transform.localEulerAngles);
 
+        //初期設定の胴体の数生成
+        for (int i = 0; i < PlData.bodyNum; i++)
+        {
+            //胴体の生成
+            AddSegment();
+
+            //最後の胴体追加の時
+            if (i == PlData.bodyNum - 1)
+            {
+                //最後の胴体はしっぽのため、名前変更
+                segments[i].name = "Tail";
+
+                //デバッグ目的　色を青色に変更
+                segments[i].GetComponent<SpriteRenderer>().color = Color.blue;
+            }
+        }
+    }
 
     void Start()
     {
@@ -98,13 +175,16 @@ public class PlayerController : MonoBehaviour
 
         //開始時のプレイヤーの向いてる方向を設定
         PlayerDirection(nowDire);
+
     }
 
     private void Update()
     {
+        //胴体の表示(見た目上)
+        RecordPosition();
+        UpdateSegments();
 
     }
-
 
     private void FixedUpdate()
     {
@@ -136,7 +216,9 @@ public class PlayerController : MonoBehaviour
             RotateAfter();
         }
 
+        //重力処理
         Gravity();
+
     }
 
     /// <summary>
@@ -165,22 +247,69 @@ public class PlayerController : MonoBehaviour
         //右方向
         if (Input.GetKey(KeyCode.D))
         {
+            //プレイヤーの右向きベクトルを取得
             plVec = this.transform.right;
+
+            //plVecのx、yの数値がそれぞれ0.00001未満なら0として扱う
+            //x
+            NumTolerance(plVec.x);
+            //y
+            NumTolerance(plVec.y);
+
+            //向いてる方向を右に変更
             PlayerDirection(PlayerDire_Mode.right);
         }
         //左方向
         else if (Input.GetKey(KeyCode.A))
         {
+            //プレイヤーの左向きベクトルを取得
             plVec = -this.transform.right;
+
+            //plVecのx、yの数値がそれぞれ0.00001未満なら0として扱う
+            //x
+            NumTolerance(plVec.x);
+            //y
+            NumTolerance(plVec.y);
+
+            //向いてる方向を左に変更
             PlayerDirection(PlayerDire_Mode.left);
+        }
+        //移動キーを話したとき
+        else if (Input.GetKeyUp(KeyCode.D) || Input.GetKeyUp(KeyCode.A))
+        {
+            //速度を0に変更
+            playerRB.velocity = Vector2.zero;
         }
         //何も押されてないとき
         else
         {
+            //ベクトルを0に
             plVec = Vector2.zero;
+            //向いてる方向をどちらも向いてない状態に
             PlayerDirection(PlayerDire_Mode.normal);
         }
 
+        //スペースキーを押したとき
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+
+        }
+
+    }
+
+    /// <summary>
+    /// float型の数値で、0.00001未満のような0に近い数値を0にする
+    /// </summary>
+    /// <param name="_value">判定したい数値(float型)</param>
+    /// <returns>判定し終わった数値</returns>
+    private float NumTolerance(float _value)
+    {
+        //_valueが0.00001未満の時、0として扱う
+        if(Mathf.Abs(_value) < 1e-5f)
+        {
+            _value = 0;
+        }
+        return _value;
     }
 
     /// <summary>
@@ -193,13 +322,13 @@ public class PlayerController : MonoBehaviour
         //左
         if (plDire == PlayerDire_Mode.left)
         {
-            //マイナスにして、左向きにする
+            //マイナスにして、見た目を左向きにする
             plSize.x = -(Mathf.Abs(plSize.x));
         }
         //右
         else if(plDire == PlayerDire_Mode.right)
         {
-            //マイナスをなくして、右向きにする
+            //マイナスをなくして、見た目を右向きにする
             plSize.x = Mathf.Abs(plSize.x);
         }
         nowDire = plDire;
@@ -212,19 +341,58 @@ public class PlayerController : MonoBehaviour
     private void PlayerMove()
     {
         //プレイヤー移動処理
+        //現在のプレイヤーの速度を取得
         Vector2 newPLVelo = playerRB.velocity;
+
         //横移動の時
         if (plVec.x != 0)
         {
-            newPLVelo.x = plVec.x * plSpeed; 
+            //移動速度を計算
+            newPLVelo.x = plVec.x * plSpeed;
+
+            //速度が上限を超えた時
+            if(newPLVelo.x > maxVelocity.x)
+            {
+                //上限速度に設定
+                newPLVelo.x = maxVelocity.x;
+            }
         }
         //縦移動の時
         if (plVec.y != 0)
         {
+            //移動速度を計算
             newPLVelo.y = plVec.y * plSpeed;
+
+            //速度が上限を超えた時
+            if (newPLVelo.y > maxVelocity.y)
+            {
+                //速度が上限を超えた時
+                newPLVelo.y = maxVelocity.y;
+            }
         }
+
         //velocity変更
         playerRB.velocity = newPLVelo;
+    }
+
+    /// <summary>
+    /// 仮　地面判定用
+    /// </summary>
+    /// <returns>false=地面と触れてない / true=地面と触れてる</returns>
+    private bool CheckGround()
+    {
+        bool _isGround = false;
+
+        Vector2 size = box.size;                 //コライダーのサイズ
+        Vector2 offset = box.offset;               //コライダーのオフセット
+        Vector2 down = -this.transform.up;       //プレイヤーの下方向ベクトル
+
+        Vector2 localBottom = offset + new Vector2(0, -size.y / 2f);
+        Vector2 bottom = transform.TransformPoint(localBottom);
+
+        _isGround = Physics2D.Raycast(bottom, down, groundCheckDistance, groundLayer);
+
+        return _isGround;
     }
 
     /// <summary>
@@ -319,14 +487,14 @@ public class PlayerController : MonoBehaviour
             //それぞれの座標の小数点第2位以下を切り捨て
             //レイがはみ出したときの座標
             Vector3 save = rayOut_savePos;
-            save.x = Mathf.Floor(save.x * 10f) / 10f;
-            save.y = Mathf.Floor(save.y * 10f) / 10f;
-            save.z = Mathf.Floor(save.z * 10f) / 10f;
+            save.x = Mathf.Floor(save.x * 100f) / 100f;
+            save.y = Mathf.Floor(save.y * 100f) / 100f;
+            save.z = Mathf.Floor(save.z * 100f) / 100f;
             //現在の回転支点の座標
             Vector3 pivot = pivotPoint.position;
-            pivot.x = Mathf.Floor(pivot.x * 10f) / 10f;
-            pivot.y = Mathf.Floor(pivot.y * 10f) / 10f;
-            pivot.z = Mathf.Floor(pivot.z * 10f) / 10f;
+            pivot.x = Mathf.Floor(pivot.x * 100f) / 100f;
+            pivot.y = Mathf.Floor(pivot.y * 100f) / 100f;
+            pivot.z = Mathf.Floor(pivot.z * 100f) / 100f;
 
             //レイがはみ出した座標と回転支点が一緒の時
             if (save == pivot)
@@ -425,7 +593,7 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// プレイヤーの回転処理
+    /// プレイヤーの回転のまとめ
     /// </summary>
     private void PlayerRotate()
     {
@@ -469,7 +637,7 @@ public class PlayerController : MonoBehaviour
             }
 
             //回転する量
-            float step = rotSpeed * Time.deltaTime;
+            float step = plRotSpeed * Time.deltaTime;
 
             //初めて回転モードに入った時のプレイヤーの向いてる方向と現在の方向が同じとき
             if (startRotDire == nowDire)
@@ -552,7 +720,7 @@ public class PlayerController : MonoBehaviour
             }
 
             //回転する量
-            float step = rotSpeed * Time.deltaTime;
+            float step = plRotSpeed * Time.deltaTime;
 
             //初めて回転モードに入った時のプレイヤーの向いてる方向と現在の方向が同じとき
             if (startRotDire == nowDire)
@@ -640,15 +808,122 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
+    /// 座標、回転値の保存
+    /// </summary>
+    private void RecordPosition()
+    {
+        //胴体が空中にあるかチェック
+        for(int i = 0; i < segments.Count; i++)
+        {
+            Body body = segments[i].GetComponent<Body>();
+            if (!body.CheckBodyGround())
+            {
+                //1つでも空中にあった場合、ループから抜け出す
+                isAllBodyGroundCheck = false;
+                break;
+            }
+            isAllBodyGroundCheck = true;
+        }
+
+        //胴体が全て地上と接しているとき
+        if (isAllBodyGroundCheck)
+        {
+            //保存
+            //最後の履歴と現在の頭の距離が更新距離を超えた時
+            if (Vector3.Distance(posHistory[posHistory.Count - 1], this.transform.position) > pointSpacing)
+            {
+                //座標の履歴追加
+                posHistory.Add(this.transform.position);
+                //回転値の履歴追加
+                rotHistory.Add(this.transform.localEulerAngles);
+
+                //メモリ対策用:古い履歴の削除
+                //履歴の最大数を取得
+                int maxHistory = MaxHistoryCount;
+                //履歴の数が最大数を超えた時
+                if (posHistory.Count > maxHistory)
+                {
+                    //それぞれの古い履歴削除
+                    posHistory.RemoveAt(0);
+                    rotHistory.RemoveAt(0);
+                }
+            }
+        }
+        //胴体が1つでも空中にある時
+        else
+        {
+            //座標の履歴追加
+            posHistory.Add(this.transform.position);
+            //回転値の履歴追加
+            rotHistory.Add(this.transform.localEulerAngles);
+
+            //メモリ対策用:古い履歴の削除
+            //履歴の最大数を取得
+            int maxHistory = MaxHistoryCount;
+            //履歴の数が最大数を超えた時
+            if (posHistory.Count > maxHistory)
+            {
+                //それぞれの古い履歴削除
+                posHistory.RemoveAt(0);
+                rotHistory.RemoveAt(0);
+            }
+        }
+    }
+    /// <summary>
+    /// 胴体の更新
+    /// </summary>
+    private void UpdateSegments()
+    {
+        //胴体同士がどれくらい離れているか計算
+        int stepsPerSeg = Mathf.RoundToInt(segmentSpacing / pointSpacing);
+
+        for (int i = 0; i < segments.Count; i++)
+        {
+            //頭が通過した履歴のどの地点の座標を参照するか
+            int index = Mathf.Max(0, posHistory.Count - 1 - stepsPerSeg * (i + 1));
+            //座標更新
+            segments[i].position = posHistory[index];
+
+            //頭が通過した履歴のどの地点の回転値を参照するか
+            int rotIndex = Mathf.Max(0, rotHistory.Count - 1 - stepsPerSeg * (i + 1));
+            //回転値更新
+            segments[i].localEulerAngles = rotHistory[rotIndex];
+        }
+    }
+
+    /// <summary>
     /// プレイヤーの速度を変更
     /// </summary>
     /// <param name="_changeSpeed">速度変化の倍率</param>
     public void PlayerSpeedChange(float _changeSpeed)
     {
         //基本速度に変化倍率をかける
-        plSpeed = basicSpeed * _changeSpeed;
+        plSpeed = PlData.basicSpeed * _changeSpeed;
 
         //仮　回転速度にも速度倍率をかける
-        rotSpeed = rotSpeed * _changeSpeed;
+        plRotSpeed = PlData.rotSpeed * _changeSpeed;
     }
+
+    /// <summary>
+    /// 胴体の追加
+    /// </summary>
+    public void AddSegment()
+    {
+        //胴体を生成
+        Transform seg = Instantiate(bodyPrefab, transform.position, Quaternion.identity, transform.parent);
+        //胴体リストに追加
+        segments.Add(seg);
+    }
+
+    /// <summary>
+    /// 回転中かどうかを返す
+    /// </summary>
+    /// <returns>false=回転中じゃない / true=回転中</returns>
+    public bool ReturnIsRot() => isRot;
+
+    /// <summary>
+    /// 胴体の数を返す
+    /// </summary>
+    /// <returns>頭を除く胴体の数(しっぽは含む)</returns>
+    public int ReturnBodyNum() => PlData.bodyNum;
 }
