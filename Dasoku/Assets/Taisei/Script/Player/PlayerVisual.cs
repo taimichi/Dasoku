@@ -16,7 +16,9 @@ public class PlayerVisual : MonoBehaviour
     //軌跡の点列 最新が頭、古いのがしっぽ
     private List<Vector3> points = new List<Vector3>();
     private float distSinceLast = 0f;   //
-    private float startMaxLength = 0f;  //初期の長さ
+
+    private Vector3 plOffset = new Vector3(0, 0, 0);
+    [SerializeField] private float downDistance = 0.3f;
 
     public PlayerController controller; //プレイヤーコントローラースクリプト
 
@@ -28,14 +30,12 @@ public class PlayerVisual : MonoBehaviour
 
         //プレイヤーの胴体の長さを取得
         maxLength = controller.ReturnBodyNum();
-
-        //初期の長さを決定
-        startMaxLength = maxLength;
-
     }
 
     void Update()
     {
+        plOffset = controller.ReturnPlayerDownVec() * downDistance;
+
         // --- 点追加 ---
         if (points.Count == 0)
         {
@@ -89,7 +89,7 @@ public class PlayerVisual : MonoBehaviour
         if (distSinceLast >= pointSpacing)
         {
             //新しい点を追加
-            points.Add(head.position);
+            points.Add(head.position + plOffset);
             distSinceLast = 0f;
         }
 

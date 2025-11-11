@@ -9,6 +9,11 @@ public class PlayerController : MonoBehaviour
     //プレイヤーデータ
     [SerializeField] private PlayerData PlData;
 
+    //プレイヤーの見た目オブジェクト
+    [SerializeField] private GameObject PlAppearance;
+    //プレイヤーの見た目
+    private SpriteRenderer PlSpriteRenderer;
+
     //プレイヤーのコライダー
     private BoxCollider2D box;
 
@@ -33,13 +38,16 @@ public class PlayerController : MonoBehaviour
     #region 移動関連
     [Header("移動関連")]
     //速度上限
-    [SerializeField] private Vector2 maxVelocity = new Vector2(20, 20);
+    [SerializeField, Tooltip("速度上限")] private Vector2 maxVelocity = new Vector2(20, 20);
 
     //最終的なプレイヤーの移動速度
     private float plSpeed = 1.0f;
 
     //プレイヤーの移動方向
     private Vector2 plVec;
+
+    //地面判定を取る距離
+    private float groundCheckDistance = 0.75f;
     #endregion
 
     #region 回転関連
@@ -117,6 +125,9 @@ public class PlayerController : MonoBehaviour
     //回転値の履歴
     private List<Vector3> rotHistory = new List<Vector3>();
 
+    //スケール値の履歴
+    private List<Vector3> sizeHistory = new List<Vector3>();
+
     /// <summary>
     /// 保持する履歴の最大数
     /// </summary>
@@ -129,7 +140,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private float groundCheckDistance = 0.2f;
     private bool isAllBodyGroundCheck = false;
     #endregion
 
@@ -141,6 +151,7 @@ public class PlayerController : MonoBehaviour
         //開始時の座標と回転値を履歴に追加
         posHistory.Add(this.transform.position);
         rotHistory.Add(this.transform.localEulerAngles);
+        sizeHistory.Add(this.transform.localScale);
 
         //初期設定の胴体の数生成
         for (int i = 0; i < PlData.bodyNum; i++)
@@ -153,15 +164,15 @@ public class PlayerController : MonoBehaviour
             {
                 //最後の胴体はしっぽのため、名前変更
                 segments[i].name = "Tail";
-
-                //デバッグ目的　色を青色に変更
-                segments[i].GetComponent<SpriteRenderer>().color = Color.blue;
             }
         }
     }
 
     void Start()
     {
+        //プレイヤーの見た目オブジェクトのスプライトレンダラーを取得
+        PlSpriteRenderer = PlAppearance.GetComponent<SpriteRenderer>();
+
         //プレイヤーのコライダーを取得
         box = this.GetComponent<BoxCollider2D>();
         //プレイヤーのリジッドボディを取得
@@ -206,15 +217,24 @@ public class PlayerController : MonoBehaviour
         {
             //移動処理
             PlayerMove();
+
+            //落下判定+処理
+            PlayerFall();
         }
         else
         {
-            //回転処理
-            PlayerRotate();
+            //地面と触れてる時のみ
+            if (CheckGround())
+            {
+                //回転処理
+                PlayerRotate();
 
-            //回転後の処理
-            RotateAfter();
+                //回転後の処理
+                RotateAfter();
+            }
         }
+
+
 
         //重力処理
         Gravity();
@@ -244,6 +264,7 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void PlayerInput()
     {
+        #region A,Dキー
         //右方向
         if (Input.GetKey(KeyCode.D))
         {
@@ -288,12 +309,19 @@ public class PlayerController : MonoBehaviour
             //向いてる方向をどちらも向いてない状態に
             PlayerDirection(PlayerDire_Mode.normal);
         }
+        #endregion
 
+        #region アクションキー(スペースキー)
         //スペースキーを押したとき
         if (Input.GetKeyDown(KeyCode.Space))
         {
-
+            if (!isRot)
+            {
+                //はりつき解除
+                this.transform.localEulerAngles = Vector3.zero;
+            }
         }
+        #endregion
 
     }
 
@@ -376,23 +404,81 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// 仮　地面判定用
+    /// プレイヤーの落下処理
+    /// </summary>
+    private void PlayerFall()
+    {
+        //地面に触れてないとき
+        if (!CheckGround() && !isRayOut)
+        {
+            //プレイヤーの見た目の向きを下向きにする
+            if (nowDire == PlayerDire_Mode.left)
+            {
+                PlAppearance.transform.localEulerAngles = new Vector3(0, 0, -90);
+            }
+            else if(nowDire == PlayerDire_Mode.right)
+            {
+                PlAppearance.transform.localEulerAngles = new Vector3(0, 0, -90);
+            }
+        }
+        //地面に触れてるとき
+        else
+        {
+            //プレイヤーの見た目の向きを通常に戻す
+            PlAppearance.transform.localEulerAngles = Vector3.zero;
+        }
+    }
+
+    /// <summary>
+    /// 地面判定用
     /// </summary>
     /// <returns>false=地面と触れてない / true=地面と触れてる</returns>
     private bool CheckGround()
     {
-        bool _isGround = false;
+        //地面判定用
+        bool isGround ;
 
-        Vector2 size = box.size;                 //コライダーのサイズ
-        Vector2 offset = box.offset;               //コライダーのオフセット
-        Vector2 down = -this.transform.up;       //プレイヤーの下方向ベクトル
+        Vector2 size = box.size;                    //コライダーのサイズ
+        Vector2 offset = box.offset;                //コライダーのオフセット
+        Vector2 down = -this.transform.up;          //プレイヤーの下方向ベクトル
 
-        Vector2 localBottom = offset + new Vector2(0, -size.y / 2f);
-        Vector2 bottom = transform.TransformPoint(localBottom);
+        //座標計算 y座標はコライダーの途中から出したいため/2ではなく/4に
+        //真ん中
+        Vector2 localBottom_center = offset + new Vector2(0, -size.y / 4f);
+        Vector2 bottom_center = transform.TransformPoint(localBottom_center);
+        //左
+        Vector2 localBottom_left = offset + new Vector2(-size.x / 2f, -size.y / 4f);
+        Vector2 bottom_left = transform.TransformPoint(localBottom_left);
+        //右
+        Vector2 localBottom_right = offset + new Vector2(size.x / 2f, -size.y / 4f);
+        Vector2 bottom_right = transform.TransformPoint(localBottom_right);
 
-        _isGround = Physics2D.Raycast(bottom, down, groundCheckDistance, groundLayer);
+        //レイ判定
+        bool isCenter = Physics2D.Raycast(bottom_center, down, groundCheckDistance, groundLayer);
+        bool isLeft = Physics2D.Raycast(bottom_left, down, groundCheckDistance, groundLayer);
+        bool isRight = Physics2D.Raycast(bottom_right, down, groundCheckDistance, groundLayer);
 
-        return _isGround;
+
+        //全ての判定がfalseの時
+        if (!isCenter && !isLeft && !isRight)
+        {
+            //地面が離れた
+            isGround = false;
+        }
+        //1つでも地面と触れてる時
+        else
+        {
+            //地面と触れている
+            isGround = true;
+        }
+
+        #region デバッグ用_レイ表示
+        Debug.DrawRay(bottom_center, down * groundCheckDistance, Color.blue);
+        Debug.DrawRay(bottom_left, down * groundCheckDistance, Color.blue);
+        Debug.DrawRay(bottom_right, down * groundCheckDistance, Color.blue);
+        #endregion
+
+        return isGround;
     }
 
     /// <summary>
@@ -487,14 +573,14 @@ public class PlayerController : MonoBehaviour
             //それぞれの座標の小数点第2位以下を切り捨て
             //レイがはみ出したときの座標
             Vector3 save = rayOut_savePos;
-            save.x = Mathf.Floor(save.x * 100f) / 100f;
-            save.y = Mathf.Floor(save.y * 100f) / 100f;
-            save.z = Mathf.Floor(save.z * 100f) / 100f;
+            save.x = Mathf.Floor(save.x * 10f) / 10f;
+            save.y = Mathf.Floor(save.y * 10f) / 10f;
+            save.z = Mathf.Floor(save.z * 10f) / 10f;
             //現在の回転支点の座標
             Vector3 pivot = pivotPoint.position;
-            pivot.x = Mathf.Floor(pivot.x * 100f) / 100f;
-            pivot.y = Mathf.Floor(pivot.y * 100f) / 100f;
-            pivot.z = Mathf.Floor(pivot.z * 100f) / 100f;
+            pivot.x = Mathf.Floor(pivot.x * 10f) / 10f;
+            pivot.y = Mathf.Floor(pivot.y * 10f) / 10f;
+            pivot.z = Mathf.Floor(pivot.z * 10f) / 10f;
 
             //レイがはみ出した座標と回転支点が一緒の時
             if (save == pivot)
@@ -836,6 +922,8 @@ public class PlayerController : MonoBehaviour
                 posHistory.Add(this.transform.position);
                 //回転値の履歴追加
                 rotHistory.Add(this.transform.localEulerAngles);
+                //スケール値の履歴追加
+                sizeHistory.Add(this.transform.localScale);
 
                 //メモリ対策用:古い履歴の削除
                 //履歴の最大数を取得
@@ -846,6 +934,7 @@ public class PlayerController : MonoBehaviour
                     //それぞれの古い履歴削除
                     posHistory.RemoveAt(0);
                     rotHistory.RemoveAt(0);
+                    sizeHistory.RemoveAt(0);
                 }
             }
         }
@@ -856,6 +945,8 @@ public class PlayerController : MonoBehaviour
             posHistory.Add(this.transform.position);
             //回転値の履歴追加
             rotHistory.Add(this.transform.localEulerAngles);
+            //スケール値の履歴追加
+            sizeHistory.Add(this.transform.localScale);
 
             //メモリ対策用:古い履歴の削除
             //履歴の最大数を取得
@@ -866,6 +957,7 @@ public class PlayerController : MonoBehaviour
                 //それぞれの古い履歴削除
                 posHistory.RemoveAt(0);
                 rotHistory.RemoveAt(0);
+                sizeHistory.RemoveAt(0);
             }
         }
     }
@@ -888,6 +980,11 @@ public class PlayerController : MonoBehaviour
             int rotIndex = Mathf.Max(0, rotHistory.Count - 1 - stepsPerSeg * (i + 1));
             //回転値更新
             segments[i].localEulerAngles = rotHistory[rotIndex];
+
+            //頭が通過した履歴のどの地点のスケール値を参照するか
+            int sizeIndex = Mathf.Max(0, sizeHistory.Count - 1 - stepsPerSeg * (i + 1));
+            //スケール値更新
+            segments[i].localScale = sizeHistory[sizeIndex];
         }
     }
 
@@ -926,4 +1023,10 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     /// <returns>頭を除く胴体の数(しっぽは含む)</returns>
     public int ReturnBodyNum() => PlData.bodyNum;
+
+    /// <summary>
+    /// プレイヤーの下ベクトルを返す
+    /// </summary>
+    /// <returns>プレイヤーの下ベクトル</returns>
+    public Vector3 ReturnPlayerDownVec() => -this.transform.up;
 }
