@@ -1,10 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 //プレイヤーの見た目用スクリプト
 [RequireComponent(typeof(LineRenderer))]
-public class PlayerVisual : MonoBehaviour
+public class SnakeVisual : MonoBehaviour
 {
     [Header("基本設定")]
     public Transform head;              //蛇の頭
@@ -12,7 +11,7 @@ public class PlayerVisual : MonoBehaviour
     public float maxLength = 10f;       //頭から尻尾までの物理的な長さ
     public float moveSmooth = 0.5f;     //位置更新の補間係数（滑らかさ）
 
-    private LineRenderer lr;
+    private LineRenderer lineRenderer;
     //軌跡の点列 最新が頭、古いのがしっぽ
     private List<Vector3> points = new List<Vector3>();
     private float distSinceLast = 0f;   //
@@ -20,13 +19,18 @@ public class PlayerVisual : MonoBehaviour
     private Vector3 plOffset = new Vector3(0, 0, 0);
     [SerializeField] private float downDistance = 0.3f;
 
-    public PlayerController controller; //プレイヤーコントローラースクリプト
+    private float nowLength = 0f; 
 
-    void Awake()
+    public SnakeController controller; //プレイヤーコントローラースクリプト
+    public SnakeBody plBody;
+
+    void Start()
     {
         //LineRendererを取得
-        lr = GetComponent<LineRenderer>();
-        lr.positionCount = 0;
+        lineRenderer = GetComponent<LineRenderer>();
+        lineRenderer.positionCount = 0;
+
+        nowLength = maxLength;
 
         //プレイヤーの胴体の長さを取得
         maxLength = controller.ReturnBodyNum();
@@ -40,48 +44,29 @@ public class PlayerVisual : MonoBehaviour
         if (points.Count == 0)
         {
             points.Add(head.position);
-            lr.positionCount = 1;
-            lr.SetPosition(0, head.position);
+            lineRenderer.positionCount = 1;
+            lineRenderer.SetPosition(0, head.position);
             return;
         }
 
-        #region 前の(10/21)
-        ////プレイヤーが回転中の時
-        //if (controller.ReturnIsRot())
+        #region 必要なくなったが念のため残しておく
+        ////↓頭からしっぽまでの長さ計算
+        ////頭と1つ目の胴体まで
+        //float totalDis = Vector3.Distance(head.position, plBody.segments[0].position);
+        //for (int i = 0; i < plBody.segments.Count - 1; i++)
         //{
-        //    //↓頭からしっぽまでの長さ計算
-        //    //頭と1つ目の胴体まで
-        //    float totalDis = Vector3.Distance(head.position, controller.segments[0].position);
-        //    for (int i = 0; i < controller.segments.Count - 1; i++)
-        //    {
-        //        //各胴体からしっぽまで
-        //        totalDis += Vector3.Distance(controller.segments[i].position, controller.segments[i + 1].position);
-        //    }
-        //    //↑長さ計算ここまで
+        //    //各胴体からしっぽまで
+        //    totalDis += Vector3.Distance(plBody.segments[i].position, plBody.segments[i + 1].position);
+        //}
+        ////↑長さ計算ここまで
 
-        //    //長さを調整
-        //    maxLength = totalDis;
-        //}
-        //else
+        ////長さを調整
+        //if(totalDis >= maxLength)
         //{
-        //    //長さを初期のものに戻す
-        //    maxLength = startMaxLength;
+        //    totalDis = maxLength;
         //}
+        //nowLength = totalDis;
         #endregion
-
-        //↓頭からしっぽまでの長さ計算
-        //頭と1つ目の胴体まで
-        float totalDis = Vector3.Distance(head.position, controller.segments[0].position);
-        for (int i = 0; i < controller.segments.Count - 1; i++)
-        {
-            //各胴体からしっぽまで
-            totalDis += Vector3.Distance(controller.segments[i].position, controller.segments[i + 1].position);
-        }
-        //↑長さ計算ここまで
-
-        //長さを調整
-        maxLength = totalDis;
-
 
         //前回の動いた点から現在の位置までの距離を計算
         distSinceLast += Vector3.Distance(points[points.Count - 1], head.position);
@@ -97,8 +82,8 @@ public class PlayerVisual : MonoBehaviour
         TrimToMaxLength();
 
         // --- LineRenderer更新 ---
-        lr.positionCount = points.Count;
-        lr.SetPositions(points.ToArray());
+        lineRenderer.positionCount = points.Count;
+        lineRenderer.SetPositions(points.ToArray());
     }
 
     /// <summary>
