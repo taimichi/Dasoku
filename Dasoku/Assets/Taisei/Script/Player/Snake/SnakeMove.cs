@@ -3,11 +3,6 @@ using UnityEngine;
 //蛇の移動処理
 public partial class SnakeController : MonoBehaviour
 {
-    //プレイヤーの移動方向
-    private Vector2 plVec;
-    //プレイヤーの見ている方向
-    private Vector2 plSeeVec;
-
     //地面判定を取る距離
     private float groundCheckDistance = 0.75f;
 
@@ -29,29 +24,29 @@ public partial class SnakeController : MonoBehaviour
         Vector2 newPLVelo = playerRB.velocity;
 
         //横移動の時
-        if (plVec.x != 0)
+        if (plMG.plVec.x != 0)
         {
             //移動速度を計算
-            newPLVelo.x = plVec.x * PlData.moveSpeed;
+            newPLVelo.x = plMG.plVec.x * plMG.plData.moveSpeed;
 
             //速度が上限を超えた時
-            if (newPLVelo.x > PlData.maxVelocity.x)
+            if (newPLVelo.x > plMG.plData.maxVelocity.x)
             {
                 //上限速度に設定
-                newPLVelo.x = PlData.maxVelocity.x;
+                newPLVelo.x = plMG.plData.maxVelocity.x;
             }
         }
         //縦移動の時
-        if (plVec.y != 0)
+        if (plMG.plVec.y != 0)
         {
             //移動速度を計算
-            newPLVelo.y = plVec.y * PlData.moveSpeed;
+            newPLVelo.y = plMG.plVec.y * plMG.plData.moveSpeed;
 
             //速度が上限を超えた時
-            if (newPLVelo.y > PlData.maxVelocity.y)
+            if (newPLVelo.y > plMG.plData.maxVelocity.y)
             {
                 //速度が上限を超えた時
-                newPLVelo.y = PlData.maxVelocity.y;
+                newPLVelo.y = plMG.plData.maxVelocity.y;
             }
         }
         //velocity変更
@@ -62,7 +57,7 @@ public partial class SnakeController : MonoBehaviour
         {
             Vector2 startPos = this.transform.position;
             Vector2 offsetPos = this.transform.position - pivotPoint.position;
-            Vector2 endPos = GM.GetNearestCorner(this.transform.position) + offsetPos;
+            Vector2 endPos = plMG.GM.GetNearestCorner(this.transform.position) + offsetPos;
 
             this.transform.position = Vector2.Lerp(startPos, endPos, 1);
 
@@ -88,7 +83,7 @@ public partial class SnakeController : MonoBehaviour
                 this.transform.localEulerAngles = Vector3.zero;
             }
 
-            if (plSeeVec.y > 0 && !isStartFall)
+            if (plMG.plSeeVec.y > 0 && !isStartFall)
             {
                 Vector3 scale = this.transform.localScale;
                 scale.x = -scale.x;

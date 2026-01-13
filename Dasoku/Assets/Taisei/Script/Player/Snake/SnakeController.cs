@@ -2,13 +2,9 @@ using UnityEngine;
 using System;
 
 //プレイヤーに関するスクリプト(操作など)
-public partial class SnakeController : MonoBehaviour
+public partial class SnakeController : MonoBehaviour, PlayerInterface
 {
-    //ゲームマネージャースクリプト
-    private GameManager GM;
-
-    //プレイヤーデータ
-    private PlayerData PlData;
+    private PlayerControlManager plMG;
 
     //プレイヤーの見た目オブジェクト
     [SerializeField, Tooltip("見た目オブジェクト")] private GameObject Appearance;
@@ -23,26 +19,8 @@ public partial class SnakeController : MonoBehaviour
     //プレイヤーのリジッドボディ
     private Rigidbody2D playerRB;
 
-    //地面用のレイヤー
-    [SerializeField, Tooltip("地面のレイヤー")] private LayerMask groundLayer;
-
-    /// <summary>
-    /// プレイヤーの方向
-    /// </summary>
-    private enum PlayerDire_Mode
-    {
-        normal,
-        right,
-        left,
-    }
-    //現在のプレイヤーの向いてる方向
-    private PlayerDire_Mode nowDire = PlayerDire_Mode.right;
-
     //重力操作用スクリプト
     private LocalGravityChanger gravityChanger = new LocalGravityChanger();
-
-    private PlayerData.PLAYER_MODE saveMode;
-
 
     //蛇手関連
     private GameObject CatchObj;
@@ -50,14 +28,10 @@ public partial class SnakeController : MonoBehaviour
     //地面用のレイヤー
     [SerializeField, Tooltip("つかめる物レイヤー")] private LayerMask CatchLayer;
 
-    private void Awake()
-    {
-        GM = GameObject.Find("GameManager").GetComponent<GameManager>();
-    }
-
     void Start()
     {
-        PlData = PlayerData.Instance;
+        plMG = PlayerControlManager.Instance;
+
         //プレイヤーの見た目オブジェクトのスプライトレンダラーを取得
         HeadSpriteRenderer = Appearance.GetComponent<SpriteRenderer>();
 
@@ -69,25 +43,17 @@ public partial class SnakeController : MonoBehaviour
         playerRB = this.GetComponent<Rigidbody2D>();
 
         //初期速度設定
-        PlData.SpeedChange(1.0f);
+        plMG.plData.SpeedChange(1.0f);
 
         //プレイヤーのリジッドボディを重力操作スクリプトに渡す
         gravityChanger.SetGravityChange(playerRB);
 
         //開始時のプレイヤーの向いてる方向を設定
-        PlayerDirection(nowDire);
-
-        saveMode = PlData.nowMode;
+        plMG.PlayerDirection(this.transform ,plMG.nowDire);
     }
 
-    private void FixedUpdate()
+    public void PlUpdate()
     {
-        //仮　形態変化
-        ModeChange();
-
-        //プレイヤーの入力
-        PlayerInput();
-
         //重力処理
         Gravity();
 
@@ -102,7 +68,7 @@ public partial class SnakeController : MonoBehaviour
         //回転中じゃなく、地面と触れてる時
         if (!CheckNowRotate(limitRot, this.transform.localEulerAngles.z))
         {
-            if(nowRot != PlayerRot_Mode.rot)
+            if (nowRot != PlayerRot_Mode.rot)
             {
                 //回転するかの判定
                 CheckRotate();
@@ -147,97 +113,93 @@ public partial class SnakeController : MonoBehaviour
         gravityChanger.GravityUpdate();
     }
 
-    /// <summary>
-    /// プレイヤーの入力
-    /// </summary>
-    private void PlayerInput()
+    public void InputRight()
     {
-        #region 移動キー
-        //右方向
-        if (Input.GetKey(KeyCode.D))
-        {
-            //プレイヤーの右向きベクトルを取得
-            plVec = this.transform.right;
+        //プレイヤーの右向きベクトルを取得
+        plMG.plVec = this.transform.right;
 
-            //x
-            NumTolerance(plVec.x);
-            plVec.x = (float)Math.Truncate(plVec.x * 100f + 1e-6f) / 100f;
-            //y
-            NumTolerance(plVec.y);
-            plVec.y = (float)Math.Truncate(plVec.y * 100f + 1e-6f) / 100f;
+        //x
+        NumTolerance(plMG.plVec.x);
+        plMG.plVec.x = (float)Math.Truncate(plMG.plVec.x * 100f + 1e-6f) / 100f;
+        //y
+        NumTolerance(plMG.plVec.y);
+        plMG.plVec.y = (float)Math.Truncate(plMG.plVec.y * 100f + 1e-6f) / 100f;
 
-            //向いてる方向を右に変更
-            PlayerDirection(PlayerDire_Mode.right);
-        }
-        //左方向
-        else if (Input.GetKey(KeyCode.A))
-        {
-            //プレイヤーの左向きベクトルを取得
-            plVec = -this.transform.right;
+        //向いてる方向を右に変更
+        plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.right);
+    }
 
-            //plVecのx、yの数値がそれぞれ0.00001未満なら0として扱う
-            //x
-            NumTolerance(plVec.x);
-            plVec.x = (float)Math.Truncate(plVec.x * 100f + 1e-6f) / 100f;
-            //y
-            NumTolerance(plVec.y);
-            plVec.y = (float)Math.Truncate(plVec.y * 100f + 1e-6f) / 100f;
+    public void InputLeft()
+    {
+        //プレイヤーの左向きベクトルを取得
+        plMG.plVec = -this.transform.right;
 
-            //向いてる方向を左に変更
-            PlayerDirection(PlayerDire_Mode.left);
-        }
-        //移動キーを話したとき
-        else if (Input.GetKeyUp(KeyCode.D) || Input.GetKeyUp(KeyCode.A))
-        {
-            //速度を0に変更
-            playerRB.velocity = Vector2.zero;
-        }
-        //何も押されてないとき
-        else
-        {
-            //ベクトルを0に
-            plVec = Vector2.zero;
-            //向いてる方向をどちらも向いてない状態に
-            PlayerDirection(PlayerDire_Mode.normal);
-        }
-        #endregion
+        //plVecのx、yの数値がそれぞれ0.00001未満なら0として扱う
+        //x
+        NumTolerance(plMG.plVec.x);
+        plMG.plVec.x = (float)Math.Truncate(plMG.plVec.x * 100f + 1e-6f) / 100f;
+        //y
+        NumTolerance(plMG.plVec.y);
+        plMG.plVec.y = (float)Math.Truncate(plMG.plVec.y * 100f + 1e-6f) / 100f;
 
-        #region アクションキー
-        //スペースキーを押したとき
-        if (Input.GetKeyDown(KeyCode.Space))
+        //向いてる方向を左に変更
+        plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.left);
+    }
+
+    public void InputLRUp()
+    {
+        playerRB.velocity = Vector2.zero;   
+    }
+
+    public void NoInputLR()
+    {
+        //ベクトルを0に
+        plMG.plVec = Vector2.zero;
+        //向いてる方向をどちらも向いてない状態に
+        plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.normal);
+    }
+
+    public void InputActionDown()
+    {
+        //各モードのアクション
+        switch (plMG.plData.nowMode)
         {
-            //各モードのアクション
-            switch (PlData.nowMode)
-            {
-                //蛇
-                case PlayerData.PLAYER_MODE.normal:
-                    //回転中じゃないとき
-                    if (!isRot)
+            //蛇
+            case PlayerData.PLAYER_MODE.snake:
+                //回転中じゃないとき
+                if (!isRot)
+                {
+                    //はりつき解除
+                    this.transform.localEulerAngles = Vector3.zero;
+                }
+                break;
+
+            //蛇手
+            case PlayerData.PLAYER_MODE.snakeHand:
+                if (!isRot)
+                {
+                    //物をつかんでないとき
+                    if (!plMG.plData.isCatchObj)
                     {
-                        //はりつき解除
-                        this.transform.localEulerAngles = Vector3.zero;
+                        CatchObject();
                     }
-                    break;
-
-                //蛇手
-                case PlayerData.PLAYER_MODE.snakeHand:
-                    if (!isRot)
+                    //物をつかんでる時
+                    else
                     {
-                        //物をつかんでないとき
-                        if (!PlData.isCatchObj)
-                        {
-                            CatchObject();
-                        }
-                        //物をつかんでる時
-                        else
-                        {
-                            ReleaseObject();
-                        }
+                        ReleaseObject();
                     }
-                    break;
-            }
+                }
+                break;
         }
-        #endregion
+    }
+
+    public void InputAction()
+    {
+
+    }
+
+    public void InputActionUp()
+    {
 
     }
 
@@ -256,7 +218,7 @@ public partial class SnakeController : MonoBehaviour
         //再設置場所を計算
         Vector2 pos = CatchObj.transform.position;
         float dis = 1.0f;   //プレイヤーからの距離
-        pos += plSeeVec * dis;
+        pos += plMG.plSeeVec * dis;
         //設置
         CatchObj.transform.position = pos;
 
@@ -268,7 +230,7 @@ public partial class SnakeController : MonoBehaviour
         rb.bodyType = RigidbodyType2D.Dynamic;
 
         CatchObj = null;
-        PlData.isCatchObj = false;
+        plMG.plData.isCatchObj = false;
     }
 
     /// <summary>
@@ -293,7 +255,7 @@ public partial class SnakeController : MonoBehaviour
             Rigidbody2D rb = CatchObj.GetComponent<Rigidbody2D>();
             rb.bodyType = RigidbodyType2D.Kinematic;
 
-            PlData.isCatchObj = true;
+            plMG.plData.isCatchObj = true;
         }
     }
 
@@ -306,9 +268,9 @@ public partial class SnakeController : MonoBehaviour
         Vector2 local_front = colliderOffset + new Vector2(colliderSize.x / 2, 0);
         Vector2 front = transform.TransformPoint(local_front);
 
-        RaycastHit2D hit = Physics2D.Raycast(front, plSeeVec, 0.5f, CatchLayer);
+        RaycastHit2D hit = Physics2D.Raycast(front, plMG.plSeeVec, 0.5f, CatchLayer);
 
-        Debug.DrawRay(front, plSeeVec * 0.5f, Color.red);
+        Debug.DrawRay(front, plMG.plSeeVec * 0.5f, Color.red);
 
         //レイがオブジェクトを取得した時
         if(hit.transform.gameObject != null)
@@ -343,32 +305,6 @@ public partial class SnakeController : MonoBehaviour
     }
 
     /// <summary>
-    /// プレイヤーの向いている方向を変更
-    /// </summary>
-    /// <param name="_isRight">false=左 / true=右</param>
-    private void PlayerDirection(PlayerDire_Mode plDire)
-    {
-        Vector3 plSize = this.transform.localScale;
-        //左
-        if (plDire == PlayerDire_Mode.left)
-        {
-            //マイナスにして、見た目を左向きにする
-            plSize.x = -(Mathf.Abs(plSize.x));
-
-            plSeeVec = -this.transform.right;
-        }
-        //右
-        else if(plDire == PlayerDire_Mode.right)
-        {
-            //マイナスをなくして、見た目を右向きにする
-            plSize.x = Mathf.Abs(plSize.x);
-            plSeeVec = this.transform.right;
-        }
-        nowDire = plDire;
-        this.transform.localScale = plSize;
-    }
-
-    /// <summary>
     /// 0.5マスの高さのブロックが前方にあるかチェック
     /// </summary>
     /// <returns>false=0.5マスブロックなし / true=0.5マスブロックあり</returns>
@@ -384,13 +320,13 @@ public partial class SnakeController : MonoBehaviour
         Vector2 down = transform.TransformPoint(down_local);
 
         //上判定のレイ
-        bool isUp = Physics2D.Raycast(up, plSeeVec, rayDistance, groundLayer);
+        bool isUp = Physics2D.Raycast(up, plMG.plSeeVec, rayDistance, plMG.groundLayer);
         //下判定のレイ
-        bool isDown = Physics2D.Raycast(down, plSeeVec, rayDistance, groundLayer);
+        bool isDown = Physics2D.Raycast(down, plMG.plSeeVec, rayDistance, plMG.groundLayer);
 
         #region デバッグ用_レイ表示
-        Debug.DrawRay(up, plSeeVec * rayDistance, Color.yellow);
-        Debug.DrawRay(down, plSeeVec * rayDistance, Color.yellow);
+        Debug.DrawRay(up, plMG.plSeeVec * rayDistance, Color.yellow);
+        Debug.DrawRay(down, plMG.plSeeVec * rayDistance, Color.yellow);
         #endregion
 
         //どちらかのみが地面に触れてる時
@@ -425,9 +361,9 @@ public partial class SnakeController : MonoBehaviour
         Vector2 bottom_right = transform.TransformPoint(localBottom_right);
 
         //レイ判定
-        bool isCenter = Physics2D.Raycast(bottom_center, down, groundCheckDistance, groundLayer);
-        bool isLeft = Physics2D.Raycast(bottom_left, down, groundCheckDistance, groundLayer);
-        bool isRight = Physics2D.Raycast(bottom_right, down, groundCheckDistance, groundLayer);
+        bool isCenter = Physics2D.Raycast(bottom_center, down, groundCheckDistance, plMG.groundLayer);
+        bool isLeft = Physics2D.Raycast(bottom_left, down, groundCheckDistance, plMG.groundLayer);
+        bool isRight = Physics2D.Raycast(bottom_right, down, groundCheckDistance, plMG.groundLayer);
 
         #region デバッグ用_レイ表示
         Debug.DrawRay(bottom_center, down * groundCheckDistance, Color.blue);
@@ -460,29 +396,16 @@ public partial class SnakeController : MonoBehaviour
         return isGround;
     }
 
-    /// <summary>
-    /// 形態変化をするかどうか
-    /// </summary>
-    private void ModeChange()
-    {
-        //保存されてる状態と現在の状態が違うとき
-        if(PlData.nowMode != saveMode)
+    public void FormChange(Sprite _sprite)
+    {            
+        //見た目変更
+        HeadSpriteRenderer.sprite = _sprite;
+
+        //形態変化した時に物を持ってたら
+        if (plMG.plData.isCatchObj)
         {
-            //形態変化処理
-            //保存されてる状態を現在のものに
-            saveMode = PlData.nowMode;
-            //現在の形態のデータを取得
-            PlayerData.PLAYER_STATE nowState = PlData.SearchState(PlData.nowMode);
-
-            //見た目変更
-            HeadSpriteRenderer.sprite = nowState.headSprite;
-
-            //形態変化した時に物を持ってたら
-            if (PlData.isCatchObj)
-            {
-                //物を離す
-                ReleaseObject();
-            }
+            //物を離す
+            ReleaseObject();
         }
 
     }
@@ -497,5 +420,5 @@ public partial class SnakeController : MonoBehaviour
     /// 胴体の数を返す
     /// </summary>
     /// <returns>頭を除く胴体の数(しっぽは含む)</returns>
-    public int ReturnBodyNum() => PlData.bodyNum;
+    public int ReturnBodyNum() => plMG.plData.bodyNum;
 }

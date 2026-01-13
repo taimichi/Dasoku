@@ -2,8 +2,18 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    public static GameManager Instance;
+
     //タイルマップのコライダー
-    public CompositeCollider2D composite;
+    public CompositeCollider2D[] composite;
+
+    private void Awake()
+    {
+        if(Instance == null)
+        {
+            Instance = this;
+        }
+    }
 
     private void Update()
     {
@@ -15,7 +25,7 @@ public class GameManager : MonoBehaviour
         }
         else if (Input.GetKeyDown(KeyCode.N))
         {
-            PlayerData.Instance.nowMode = PlayerData.PLAYER_MODE.normal;
+            PlayerData.Instance.nowMode = PlayerData.PLAYER_MODE.snake;
         }
 
         //胴体の数変更
@@ -39,17 +49,20 @@ public class GameManager : MonoBehaviour
 
         Gizmos.color = Color.red;
 
-        int pathCount = composite.pathCount;
-
-        for (int i = 0; i < pathCount; i++)
+        for(int n = 0; n < composite.Length; n++)
         {
-            int pointCount = composite.GetPathPointCount(i);
-            Vector2[] points = new Vector2[pointCount];
-            composite.GetPath(i, points);
+            int pathCount = composite[n].pathCount;
 
-            for (int p = 0; p < points.Length; p++)
+            for (int i = 0; i < pathCount; i++)
             {
-                Gizmos.DrawSphere(points[p], 0.05f);
+                int pointCount = composite[n].GetPathPointCount(i);
+                Vector2[] points = new Vector2[pointCount];
+                composite[n].GetPath(i, points);
+
+                for (int p = 0; p < points.Length; p++)
+                {
+                    Gizmos.DrawSphere(points[p], 0.05f);
+                }
             }
         }
     }
@@ -59,11 +72,10 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public Vector2 GetNearestCorner(Vector2 targetPos)
     {
-        // スクリプトに CompositeCollider2D が設定されていない場合、
-        // 自身のオブジェクトから自動で取得する
+        //nullチェック
         if (composite == null)
         {
-            composite = GetComponent<CompositeCollider2D>();
+            return Vector2.zero;
         }
 
         // 最小距離を初期化（非常に大きい値にセット）
@@ -72,32 +84,35 @@ public class GameManager : MonoBehaviour
         // 最も近い角を保持する変数
         Vector2 nearest = Vector2.zero;
 
-        // CompositeCollider2D が保持するパス（ポリゴン）の数
-        int pathCount = composite.pathCount;
-
-        // すべてのパスをループ
-        for (int i = 0; i < pathCount; i++)
+        for(int n = 0; n < composite.Length; n++)
         {
-            // このパスが持つ頂点の数を取得
-            int pointCount = composite.GetPathPointCount(i);
+            // CompositeCollider2D が保持するパス（ポリゴン）の数
+            int pathCount = composite[n].pathCount;
 
-            // 頂点座標を格納する配列
-            Vector2[] points = new Vector2[pointCount];
-
-            // ★ この時点で points の内容は「ワールド座標」で返される ★
-            composite.GetPath(i, points);
-
-            // すべての頂点をループ
-            for (int p = 0; p < points.Length; p++)
+            // すべてのパスをループ
+            for (int i = 0; i < pathCount; i++)
             {
-                // ターゲット位置との距離を計算
-                float dist = Vector2.Distance(targetPos, points[p]);
+                // このパスが持つ頂点の数を取得
+                int pointCount = composite[n].GetPathPointCount(i);
 
-                // 現在の距離が最も短ければ更新
-                if (dist < minDist)
+                // 頂点座標を格納する配列
+                Vector2[] points = new Vector2[pointCount];
+
+                //ワールド座標を取得
+                composite[n].GetPath(i, points);
+
+                // すべての頂点をループ
+                for (int p = 0; p < points.Length; p++)
                 {
-                    minDist = dist;     // 最短距離を上書き
-                    nearest = points[p];  // 最も近い角を記録
+                    // ターゲット位置との距離を計算
+                    float dist = Vector2.Distance(targetPos, points[p]);
+
+                    // 現在の距離が最も短ければ更新
+                    if (dist < minDist)
+                    {
+                        minDist = dist;     // 最短距離を上書き
+                        nearest = points[p];  // 最も近い角を記録
+                    }
                 }
             }
         }

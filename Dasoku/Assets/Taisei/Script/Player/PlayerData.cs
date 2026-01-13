@@ -7,23 +7,31 @@ public class PlayerData : MonoBehaviour
 
     #region プレイヤーステータス
     //基礎速度
-    [Tooltip("基礎速度")] public float moveSpeed;
+    [Tooltip("基礎速度")]
+    public float moveSpeed;
     //速度上限
-    [SerializeField, Tooltip("速度上限")] public Vector2 maxVelocity = new Vector2(20, 20);
+    [SerializeField, Tooltip("速度上限")]
+    public Vector2 maxVelocity = new Vector2(20, 20);
     //回転速度
-    [Tooltip("1秒に回転する角度")] public float RotSpeed;
+    [Tooltip("1秒に回転する角度")]
+    public float RotSpeed;
     //胴体の数
-    [Tooltip("胴体の数")] public int bodyNum = 4;
+    [Tooltip("胴体の数")]
+    public int bodyNum = 4;
     //現在の形態
-    [Tooltip("現在の形態")] public PLAYER_MODE nowMode = PLAYER_MODE.normal;
+    public PLAYER_MODE nowMode = PLAYER_MODE.snake;
     //物をつかんでいるかどうか
-    [Tooltip("物をつかんでるか")] public bool isCatchObj = false;
+    [System.NonSerialized]
+    public bool isCatchObj = false;
+    //現在使用しているプレイヤースクリプトスクリプト
+    [System.NonSerialized]
+    public PLAYER_CONTROL nowControl = PLAYER_CONTROL.snake;
     #endregion
 
     //蛇の形態
     public enum PLAYER_MODE
     {
-        normal,         //蛇
+        snake,          //蛇
         snakeReg,       //蛇足
         snakeReg_Pro,   //蛇足プロ
         foot,           //足
@@ -32,8 +40,21 @@ public class PlayerData : MonoBehaviour
         strongArm,      //剛腕
         ouroboros,      //ウロボロス
         quetzalcoatl,   //ケツァルコアトル
-        snakeGod,       //蛇神
+        snakeGod        //蛇神
     }
+
+    //使用するプレイヤーコントローラースクリプト
+    public enum PLAYER_CONTROL
+    {
+        snake,          //plScript[0] SnakeController
+        snakeReg,       //plScript[1] SnakeRegController
+        foot,           //plScript[2] FootController
+        ouroboros,      //
+        quetzalcoatl,   //
+        snakeGod        //
+    }
+    //各プレイヤースクリプトの配列
+    public MonoBehaviour[] plScripts;
 
     //形態の構造体
     [System.Serializable]
@@ -41,10 +62,9 @@ public class PlayerData : MonoBehaviour
     {
         public PLAYER_MODE mode;        //形態
         public Sprite headSprite;       //頭のスプライト
-        public bool isLineRenderer;     //胴体の表現にラインレンダラーを使うかどうか
+        public PLAYER_CONTROL control;
     }
-
-    //各形態ごとの構造体を保存する配列
+    //各形態ごとの構造体配列
     public PLAYER_STATE[] States;
 
     private float basicMoveSpeed = 2;
@@ -52,9 +72,9 @@ public class PlayerData : MonoBehaviour
     private float basicRotSpeed = 180;
 
     //胴体の最低数
-    private const int MIN_BODYNUM = 4;
+    private const int MIN_BODYNUM = 3;
     //胴体の最大数
-    private const int MAX_BODYNUM = 10;
+    private const int MAX_BODYNUM = 8;
 
     private void Awake()
     {

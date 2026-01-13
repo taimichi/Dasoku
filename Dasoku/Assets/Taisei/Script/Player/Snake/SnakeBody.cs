@@ -21,12 +21,6 @@ public class SnakeBody : MonoBehaviour
     //座標の履歴
     private List<Vector3> posHistory = new List<Vector3>();
 
-    //回転値の履歴
-    private List<Vector3> rotHistory = new List<Vector3>();
-
-    //スケール値の履歴
-    private List<Vector3> sizeHistory = new List<Vector3>();
-
     /// <summary>
     /// 保持する履歴の最大数
     /// </summary>
@@ -47,8 +41,6 @@ public class SnakeBody : MonoBehaviour
 
         //開始時の座標と回転値を履歴に追加
         posHistory.Add(this.transform.position);
-        rotHistory.Add(this.transform.localEulerAngles);
-        sizeHistory.Add(this.transform.localScale);
 
         //初期設定の胴体の数生成
         for (int i = 0; i < PlData.bodyNum; i++)
@@ -99,10 +91,6 @@ public class SnakeBody : MonoBehaviour
             {
                 //座標の履歴追加
                 posHistory.Add(this.transform.position);
-                //回転値の履歴追加
-                rotHistory.Add(this.transform.localEulerAngles);
-                //スケール値の履歴追加
-                sizeHistory.Add(this.transform.localScale);
 
                 //メモリ対策用:古い履歴の削除
                 //履歴の最大数を取得
@@ -112,8 +100,6 @@ public class SnakeBody : MonoBehaviour
                 {
                     //それぞれの古い履歴削除
                     posHistory.RemoveAt(0);
-                    rotHistory.RemoveAt(0);
-                    sizeHistory.RemoveAt(0);
                 }
             }
         }
@@ -122,10 +108,6 @@ public class SnakeBody : MonoBehaviour
         {
             //座標の履歴追加
             posHistory.Add(this.transform.position);
-            //回転値の履歴追加
-            rotHistory.Add(this.transform.localEulerAngles);
-            //スケール値の履歴追加
-            sizeHistory.Add(this.transform.localScale);
 
             //メモリ対策用:古い履歴の削除
             //履歴の最大数を取得
@@ -135,8 +117,6 @@ public class SnakeBody : MonoBehaviour
             {
                 //それぞれの古い履歴削除
                 posHistory.RemoveAt(0);
-                rotHistory.RemoveAt(0);
-                sizeHistory.RemoveAt(0);
             }
         }
     }
@@ -155,16 +135,6 @@ public class SnakeBody : MonoBehaviour
             int index = Mathf.Max(0, posHistory.Count - 1 - stepsPerSeg * (i + 1));
             //座標更新
             segments[i].position = posHistory[index];
-
-            //頭が通過した履歴のどの地点の回転値を参照するか
-            int rotIndex = Mathf.Max(0, rotHistory.Count - 1 - stepsPerSeg * (i + 1));
-            //回転値更新
-            segments[i].localEulerAngles = rotHistory[rotIndex];
-
-            //頭が通過した履歴のどの地点のスケール値を参照するか
-            int sizeIndex = Mathf.Max(0, sizeHistory.Count - 1 - stepsPerSeg * (i + 1));
-            //スケール値更新
-            segments[i].localScale = sizeHistory[sizeIndex];
         }
     }
 

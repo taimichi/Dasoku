@@ -39,7 +39,7 @@ public partial class SnakeController : MonoBehaviour
     private PlayerRot_Mode nowRot = PlayerRot_Mode.none;
 
     //初めて回転モードに入った時のプレイヤーの向いてる方向
-    private PlayerDire_Mode startRotDire = PlayerDire_Mode.normal;
+    private PlayerControlManager.PlayerDire_Mode startRotDire = PlayerControlManager.PlayerDire_Mode.normal;
 
     //初めて回転モードに入ったか
     private bool isStartRotDire = false;
@@ -85,17 +85,17 @@ public partial class SnakeController : MonoBehaviour
 
         //レイが地面と触れているか
         //左下
-        bool isLeftGrounded = Physics2D.Raycast(leftBottom, down, rayDistance_under, groundLayer);
+        bool isLeftGrounded = Physics2D.Raycast(leftBottom, down, rayDistance_under, plMG.groundLayer);
         //右下
-        bool isRightGrounded = Physics2D.Raycast(rightBottom, down, rayDistance_under, groundLayer);
+        bool isRightGrounded = Physics2D.Raycast(rightBottom, down, rayDistance_under, plMG.groundLayer);
         //前方の壁とレイが触れてるか
-        bool isForwardGrounded = Physics2D.Raycast(forward, plSeeVec, rayDistance_front, groundLayer);
+        bool isForwardGrounded = Physics2D.Raycast(forward, plMG.plSeeVec, rayDistance_front, plMG.groundLayer);
 
         //前方に壁があるとき
         if (isForwardGrounded)
         {
-            RaycastHit2D frontHit = Physics2D.Raycast(forward, plSeeVec, rayDistance_front, groundLayer);
-            Vector2 nearCorner = GM.GetNearestCorner(frontHit.point);
+            RaycastHit2D frontHit = Physics2D.Raycast(forward, plMG.plSeeVec, rayDistance_front, plMG.groundLayer);
+            Vector2 nearCorner = plMG.GM.GetNearestCorner(frontHit.point);
 
             //プレイヤーとブロックの高さ
             float h = Mathf.Abs(pivotPoint.position.y - nearCorner.y);
@@ -112,7 +112,7 @@ public partial class SnakeController : MonoBehaviour
         #region レイ表示(デバッグ用)
         Debug.DrawRay(leftBottom, down * rayDistance_under, Color.green);
         Debug.DrawRay(rightBottom, down * rayDistance_under, Color.red);
-        Debug.DrawRay(forward, plSeeVec * rayDistance_front, Color.green);
+        Debug.DrawRay(forward, plMG.plSeeVec * rayDistance_front, Color.green);
         #endregion
 
         //地面が両方触れてる時かつ回転不可能状態の時
@@ -135,8 +135,8 @@ public partial class SnakeController : MonoBehaviour
             //レイの長さ
             float rayDis = 0.6f;
             //壁に当たったかどうか
-            bool isForwardWall = Physics2D.Raycast(forward, plSeeVec, rayDis, groundLayer);
-            RaycastHit2D hit = Physics2D.Raycast(forward, plSeeVec, rayDis, groundLayer);
+            bool isForwardWall = Physics2D.Raycast(forward, plMG.plSeeVec, rayDis, plMG.groundLayer);
+            RaycastHit2D hit = Physics2D.Raycast(forward, plMG.plSeeVec, rayDis, plMG.groundLayer);
 
             //両端が地面と触れてる時
             if (isLeftGrounded && isRightGrounded)
@@ -147,7 +147,7 @@ public partial class SnakeController : MonoBehaviour
                 isRot = false;
 
                 //回転時の処理に使ってた物を初期状態に戻す
-                startRotDire = PlayerDire_Mode.normal;
+                startRotDire = PlayerControlManager.PlayerDire_Mode.normal;
                 isStartRotDire = false;
                 rotState = BasicRot_State.none;
             }
@@ -155,7 +155,7 @@ public partial class SnakeController : MonoBehaviour
             else if (isLeftGrounded ^ isRightGrounded)
             {
                 //回転直後、前の場所に戻ろうとしたとき
-                if (nowDire != PlayerDire_Mode.normal && nowDire != startRotDire)
+                if (plMG.nowDire != PlayerControlManager.PlayerDire_Mode.normal && plMG.nowDire != startRotDire)
                 {
                     //モードを通常に
                     nowRot = PlayerRot_Mode.none;
@@ -173,9 +173,9 @@ public partial class SnakeController : MonoBehaviour
                     //仮　Process_RotWall()を使うと挙動がなぜかおかしくなるので旧処理のまま
                     rotState = BasicRot_State.wall;
                     //レイが当たった座標に近い角の座標を取得
-                    Vector2 rot = GM.GetNearestCorner(hit.point);
+                    Vector2 rot = plMG.GM.GetNearestCorner(hit.point);
                     //以下の計算は一緒
-                    Vector2 X = plSeeVec * colliderSize.x * 7 / 8;
+                    Vector2 X = plMG.plSeeVec * colliderSize.x * 7 / 8;
                     Vector2 Y = this.transform.up * colliderSize.y * 7 / 8;
                     rot -= X;
                     rot += Y;
@@ -194,7 +194,7 @@ public partial class SnakeController : MonoBehaviour
         }
 
         //どちらかの方向キーを押してる時
-        if (nowDire != PlayerDire_Mode.normal)
+        if (plMG.nowDire != PlayerControlManager.PlayerDire_Mode.normal)
         {
             //左下か右下のどちらかのみが地面と触れてる時
             if (isLeftGrounded ^ isRightGrounded && rotState != BasicRot_State.wall)
@@ -233,11 +233,11 @@ public partial class SnakeController : MonoBehaviour
     private void Process_RotWall(Vector2 size, Vector2 targetPos)
     {
         //一番近い角を取得
-        Vector2 rotPos = GM.GetNearestCorner(targetPos);
+        Vector2 rotPos = plMG.GM.GetNearestCorner(targetPos);
 
         //回転の支点を計算
         //×4/5は微調整用
-        Vector2 X = plSeeVec * size.x * 7 / 8;
+        Vector2 X = plMG.plSeeVec * size.x * 7 / 8;
         Vector2 Y = this.transform.up * size.y * 7 / 8;
         rotPos -= X;
         rotPos += Y;
@@ -270,7 +270,7 @@ public partial class SnakeController : MonoBehaviour
         //レイがはみ出して初めての処理の時
         if (!isRayOut)
         {
-            rayOut_savePos = GM.GetNearestCorner(targetPos);
+            rayOut_savePos = plMG.GM.GetNearestCorner(targetPos);
             isRayOut = true;
         }
 
@@ -336,22 +336,22 @@ public partial class SnakeController : MonoBehaviour
     private void RotFunction(int _rot)
     {
         //向いてる方向が右か左、どちらかを向いてる時のみ
-        if (nowDire != PlayerDire_Mode.normal)
+        if (plMG.nowDire != PlayerControlManager.PlayerDire_Mode.normal)
         {
             //初めて回転モードに入った時
             if (!isStartRotDire)
             {
                 //初めて回転モードに入った時のプレイヤーの向いてる方向を取得
-                startRotDire = nowDire;
+                startRotDire = plMG.nowDire;
                 //この処理は1度だけ
                 isStartRotDire = true;
             }
 
             //回転する量
-            float step = PlData.RotSpeed * Time.deltaTime;
+            float step = plMG.plData.RotSpeed * Time.deltaTime;
 
             //初めて回転モードに入った時のプレイヤーの向いてる方向と現在の方向が同じとき
-            if (startRotDire == nowDire)
+            if (startRotDire == plMG.nowDire)
             {
                 //一度に回転する量を超えた時
                 if (rotateAmount + step > limitRot)
@@ -370,7 +370,7 @@ public partial class SnakeController : MonoBehaviour
 
             //回転
             //前進時
-            if (nowDire == PlayerDire_Mode.right)
+            if (plMG.nowDire == PlayerControlManager.PlayerDire_Mode.right)
             {
                 //pivotPosを支点にz軸で回転
                 this.transform.RotateAround(pivotPos, Vector3.forward, -step * _rot);
@@ -379,7 +379,7 @@ public partial class SnakeController : MonoBehaviour
                 CalculationRotateAmount(step);
             }
             //後退時
-            else if (nowDire == PlayerDire_Mode.left)
+            else if (plMG.nowDire == PlayerControlManager.PlayerDire_Mode.left)
             {
                 //pivotPosを支点にz軸で回転
                 this.transform.RotateAround(pivotPos, Vector3.forward, step * _rot);
@@ -403,7 +403,7 @@ public partial class SnakeController : MonoBehaviour
     /// <param name="step">回転する量</param>
     private void CalculationRotateAmount(float step)
     {
-        if (startRotDire == nowDire)
+        if (startRotDire == plMG.nowDire)
         {
             //回転した量を追加
             rotateAmount += step;
@@ -429,7 +429,7 @@ public partial class SnakeController : MonoBehaviour
             playerRB.constraints = RigidbodyConstraints2D.FreezeRotation;
 
             //現在の向いてる方角が通常以外(右か左)の時
-            if (nowDire != PlayerDire_Mode.normal)
+            if (plMG.nowDire != PlayerControlManager.PlayerDire_Mode.normal)
             {
                 PlayerMove();
             }
