@@ -22,12 +22,6 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
     //重力操作用スクリプト
     private LocalGravityChanger gravityChanger = new LocalGravityChanger();
 
-    //蛇手関連
-    private GameObject CatchObj;
-    [SerializeField] private Transform CatchPoint;
-    //地面用のレイヤー
-    [SerializeField, Tooltip("つかめる物レイヤー")] private LayerMask CatchLayer;
-
     void Start()
     {
         plMG = PlayerControlManager.Instance;
@@ -57,8 +51,18 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
         //重力処理
         Gravity();
 
-        //落下判定+処理
-        PlayerFall();
+        //蛇手のアクション状態が待機状態の時
+        if (nowHandAction == HANDACTION_STATE.idle)
+        {
+            //落下判定+処理
+            PlayerFall();
+        }
+        //蛇手のアクション状態が待機状態じゃないとき
+        else
+        {
+            return;
+        }
+        
         //落下中は以降の処理をしない
         if (isFall)
         {
@@ -178,17 +182,21 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
             case PlayerData.PLAYER_MODE.snakeHand:
                 if (!isRot)
                 {
-                    //物をつかんでないとき
-                    if (!plMG.plData.isCatchObj)
+                    //待機状態の時
+                    if(nowHandAction == HANDACTION_STATE.idle)
                     {
-                        CatchObject();
+                        nowHandAction = HANDACTION_STATE.action;
                     }
-                    //物をつかんでる時
-                    else
+                    //アクション状態の時
+                    else if(nowHandAction == HANDACTION_STATE.action)
                     {
-                        ReleaseObject();
+                        nowHandAction = HANDACTION_STATE.move;
                     }
                 }
+                break;
+
+            //剛腕
+            case PlayerData.PLAYER_MODE.strongArm:
                 break;
         }
     }
@@ -203,91 +211,11 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
 
     }
 
-    /// <summary>
-    /// 離す処理
-    /// </summary>
-    private void ReleaseObject()
+    public void FormChange(Sprite _sprite)
     {
-        //つかんだものを子オブジェクトじゃなくする
-        CatchObj.transform.parent = null;
-        //大きさを元に戻す
-        CatchObj.transform.localScale = Vector2.one;
-        //角度を普通にする
-        CatchObj.transform.localEulerAngles = Vector3.zero;
-
-        //再設置場所を計算
-        Vector2 pos = CatchObj.transform.position;
-        float dis = 1.0f;   //プレイヤーからの距離
-        pos += plMG.plSeeVec * dis;
-        //設置
-        CatchObj.transform.position = pos;
-
-        //当たり判定を有効化
-        BoxCollider2D boxCol = CatchObj.GetComponent<BoxCollider2D>();
-        boxCol.enabled = true;
-        //物理演算を有効化
-        Rigidbody2D rb = CatchObj.GetComponent<Rigidbody2D>();
-        rb.bodyType = RigidbodyType2D.Dynamic;
-
-        CatchObj = null;
-        plMG.plData.isCatchObj = false;
+        //見た目変更
+        HeadSpriteRenderer.sprite = _sprite;
     }
-
-    /// <summary>
-    /// つかむ処理
-    /// </summary>
-    private void CatchObject()
-    {
-        //前方につかめる物があるとき
-        if (CheckCatch())
-        {
-            //つかんだものを子オブジェクトにする
-            CatchObj.transform.parent = this.transform;
-            //つかんだものを持ってる状態の時の場所に移動
-            CatchObj.transform.position = CatchPoint.position;
-            //大きさを小さくする
-            CatchObj.transform.localScale = new Vector2(0.7f, 0.7f);
-
-            //当たり判定を無効化
-            BoxCollider2D boxCol = CatchObj.GetComponent<BoxCollider2D>();
-            boxCol.enabled = false;
-            //物理演算を無効化
-            Rigidbody2D rb = CatchObj.GetComponent<Rigidbody2D>();
-            rb.bodyType = RigidbodyType2D.Kinematic;
-
-            plMG.plData.isCatchObj = true;
-        }
-    }
-
-    /// <summary>
-    /// 前方につかめる物があるかどうか
-    /// </summary>
-    /// <returns>false=ない / true=ある</returns>
-    private bool CheckCatch()
-    {
-        Vector2 local_front = colliderOffset + new Vector2(colliderSize.x / 2, 0);
-        Vector2 front = transform.TransformPoint(local_front);
-
-        RaycastHit2D hit = Physics2D.Raycast(front, plMG.plSeeVec, 0.5f, CatchLayer);
-
-        Debug.DrawRay(front, plMG.plSeeVec * 0.5f, Color.red);
-
-        //レイがオブジェクトを取得した時
-        if(hit.transform.gameObject != null)
-        {
-            Debug.Log(hit.transform.gameObject.name);
-
-            //取得したオブジェクトがつかめる物だったとき
-            if (hit.transform.tag == "CatchObject")
-            {
-                CatchObj = hit.transform.gameObject;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
 
     /// <summary>
     /// float型の数値で、0.00001未満のような0に近い数値を0にする
@@ -396,19 +324,6 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
         return isGround;
     }
 
-    public void FormChange(Sprite _sprite)
-    {            
-        //見た目変更
-        HeadSpriteRenderer.sprite = _sprite;
-
-        //形態変化した時に物を持ってたら
-        if (plMG.plData.isCatchObj)
-        {
-            //物を離す
-            ReleaseObject();
-        }
-
-    }
 
     /// <summary>
     /// プレイヤーの下ベクトルを返す

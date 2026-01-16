@@ -4,6 +4,9 @@ using UnityEngine;
 public partial class SnakeController : MonoBehaviour
 {
     [Header("回転関連")]
+    //回転位置の取得用のオブジェクト
+    [SerializeField] private Transform pivotPoint;
+
     //一度に回転できる角度
     private float limitRot = 90f;
 
@@ -15,9 +18,6 @@ public partial class SnakeController : MonoBehaviour
 
     //回転するかどうか
     private bool isRot = false;
-
-    //回転位置の取得用のオブジェクト
-    [SerializeField, Header("回転位置")] private Transform pivotPoint;
 
     //レイがはみ出た座標保持用
     private Vector3 rayOut_savePos;

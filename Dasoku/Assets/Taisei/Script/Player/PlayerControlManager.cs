@@ -6,8 +6,13 @@ public class PlayerControlManager : MonoBehaviour
 {
     public static PlayerControlManager Instance;
 
+    //ゲームマネージャー
     [System.NonSerialized] public GameManager GM;
+    //プレイヤーデータ
     [System.NonSerialized] public PlayerData plData;
+
+    //プレイヤー用カメラ
+    [SerializeField] private GameObject plCam;  
 
     //プレイヤーごとの共通変数
     /// <summary>
@@ -22,6 +27,7 @@ public class PlayerControlManager : MonoBehaviour
     //現在のプレイヤーの向いてる方向
     public PlayerDire_Mode nowDire = PlayerDire_Mode.right;
 
+    //地面のレイヤー
     [SerializeField] public LayerMask groundLayer;
 
     //プレイヤーの移動方向
@@ -29,12 +35,14 @@ public class PlayerControlManager : MonoBehaviour
     //プレイヤーの見ている方向
     public Vector2 plSeeVec;
 
+    //保存されてるプレイヤーの形態
     [System.NonSerialized] public PlayerData.PLAYER_MODE saveMode;
+    //現在のプレイヤーの形態情報
     [System.NonSerialized] private PlayerData.PLAYER_STATE nowState;
-
 
     private void Awake()
     {
+        //シングルトン
         if(Instance == null)
         {
             Instance = this;
@@ -60,20 +68,14 @@ public class PlayerControlManager : MonoBehaviour
         saveMode = plData.nowMode;
 
         ModeChange();
+        PlayerInterface pl = GetPlayerScript();
+        pl.FormChange(nowState.headSprite);
     }
 
     void Update()
     {
-        int index = (int)plData.nowControl;
-
-        //バグチェック
-        if(index < 0 || plData.plScripts.Length <= 0)
-        {
-            return;
-        }
-
         //スクリプト取得
-        PlayerInterface pl = plData.plScripts[index] as PlayerInterface;
+        PlayerInterface pl = GetPlayerScript();
         //nullチェック
         if(pl == null)
         {
@@ -83,7 +85,7 @@ public class PlayerControlManager : MonoBehaviour
         //入力処理
         PlayerInput(pl);
 
-        //nullじゃないときのみ実行
+        //更新
         pl.PlUpdate();
 
         if (plData.nowMode != saveMode)
@@ -93,6 +95,25 @@ public class PlayerControlManager : MonoBehaviour
             //見た目を変更
             pl.FormChange(nowState.headSprite);
         }
+
+        Vector3 plPos = plData.nowBody.transform.position;
+        plCam.transform.position = new Vector3(plPos.x, plPos.y, plCam.transform.position.z);
+    }
+
+    /// <summary>
+    /// 現在の状態に合わせてプレイヤースクリプトを取得
+    /// </summary>
+    private PlayerInterface GetPlayerScript()
+    {
+        int index = (int)plData.nowControl;
+
+        //バグチェック
+        if (index < 0 || plData.plScripts.Length <= 0)
+        {
+            return null;
+        }
+
+        return plData.plScripts[index] as PlayerInterface;
     }
 
     /// <summary>
@@ -150,6 +171,38 @@ public class PlayerControlManager : MonoBehaviour
         nowState = plData.SearchState(plData.nowMode);
         //スクリプトを変更
         plData.nowControl = nowState.control;
+        //身体を変更
+        plData.nowBodyType = nowState.bodyType;
+
+        BodyChange();
+    }
+
+    /// <summary>
+    /// 体オブジェクトを変更+表示非表示変更
+    /// </summary>
+    private void BodyChange()
+    {
+        int index = (int)plData.nowBodyType;
+        //バグチェック
+        if (index < 0 || plData.PlayerObjct.Length <= 0)
+        {
+            return;
+        }
+
+        //現在の体オブジェクトを取得
+        plData.nowBody = plData.PlayerObjct[index];
+        //現在の体オブジェクトを表示、それ以外を非表示にする
+        for(int i= 0; i < plData.PlayerObjct.Length; i++)
+        {
+            if(i == index)
+            {
+                plData.PlayerObjct[i].SetActive(true);
+            }
+            else
+            {
+                plData.PlayerObjct[i].SetActive(false);
+            }
+        }
     }
 
     /// <summary>

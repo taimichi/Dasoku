@@ -6,6 +6,7 @@ public class PlayerData : MonoBehaviour
     public static PlayerData Instance;
 
     #region プレイヤーステータス
+    [Header("プレイヤーステータス")]
     //基礎速度
     [Tooltip("基礎速度")]
     public float moveSpeed;
@@ -20,13 +21,30 @@ public class PlayerData : MonoBehaviour
     public int bodyNum = 4;
     //現在の形態
     public PLAYER_MODE nowMode = PLAYER_MODE.snake;
-    //物をつかんでいるかどうか
-    [System.NonSerialized]
-    public bool isCatchObj = false;
     //現在使用しているプレイヤースクリプトスクリプト
     [System.NonSerialized]
     public PLAYER_CONTROL nowControl = PLAYER_CONTROL.snake;
+    //現在のプレイヤーの体
+    [System.NonSerialized]
+    public PLAYER_BODYTYPE nowBodyType = PLAYER_BODYTYPE.snake;
+    [System.NonSerialized]
+    public GameObject nowBody;
     #endregion
+
+    [Header("その他")]
+    //各プレイヤーのオブジェクト
+    public GameObject[] PlayerObjct;
+
+    //蛇の体の種類
+    public enum PLAYER_BODYTYPE
+    {
+        snake,          //蛇系統
+        snakeReg,       //蛇足系統
+        foot,           //足系統
+        ouroboros,      //ウロボロス
+        quetzalcoatl,   //ケツァルコアトル
+        snakeGod,       //蛇神
+    }
 
     //蛇の形態
     public enum PLAYER_MODE
@@ -60,9 +78,10 @@ public class PlayerData : MonoBehaviour
     [System.Serializable]
     public struct PLAYER_STATE
     {
-        public PLAYER_MODE mode;        //形態
-        public Sprite headSprite;       //頭のスプライト
-        public PLAYER_CONTROL control;
+        public PLAYER_MODE mode;            //形態
+        public Sprite headSprite;           //頭のスプライト
+        public PLAYER_CONTROL control;      //コントローラースクリプト
+        public PLAYER_BODYTYPE bodyType;    //身体の種類
     }
     //各形態ごとの構造体配列
     public PLAYER_STATE[] States;

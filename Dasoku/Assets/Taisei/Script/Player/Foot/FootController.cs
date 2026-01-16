@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class FootController : MonoBehaviour, PlayerInterface
 {
@@ -18,7 +19,22 @@ public class FootController : MonoBehaviour, PlayerInterface
 
     //ジャンプ力
     [SerializeField] private float jumpPower = 10f;
+    //アクションキーを押しているかどうか
     private bool isActionInput = false;
+
+    //ヒール関連
+    /// <summary>
+    /// ヒールアクションの状態
+    /// </summary>
+    private enum HEELACTION_STATE
+    {
+        idle,   //待機状態
+        jump,   //ジャンプ状態
+        action, //アクション状態
+    }
+    private HEELACTION_STATE nowHeelState = HEELACTION_STATE.idle;
+    //
+    private bool isHeelDrop = false;
 
     void Start()
     {
@@ -53,11 +69,14 @@ public class FootController : MonoBehaviour, PlayerInterface
                 float moveJumpPower = 1f;
                 //移動
                 playerRB.AddForce(new Vector2(plMG.plVec.x, 0), ForceMode2D.Impulse);
+
                 //ジャンプ処理
+                //通常
                 if (!isActionInput)
                 {
                     playerRB.AddForce(new Vector2(plMG.plVec.x, moveJumpPower), ForceMode2D.Impulse);
                 }
+                //アクション(大ジャンプ)
                 else
                 {
                     playerRB.velocity = new Vector2(playerRB.velocity.x, jumpPower);
@@ -68,19 +87,42 @@ public class FootController : MonoBehaviour, PlayerInterface
                     playerRB.velocity = new Vector2(plMG.plVec.x * max, playerRB.velocity.y);
                 }
             }
+            //方向が入力されてないとき
+            else
+            {
+                //ジャンプ(アクション)処理
+                if (isActionInput)
+                {
+                    playerRB.velocity = new Vector2(playerRB.velocity.x, jumpPower);
+                }
+            }
         }
         //空中の時
         else
         {
-            //移動
-            playerRB.AddForce(new Vector2(plMG.plVec.x, 0), ForceMode2D.Impulse);
-            //速度制限
-            if (Mathf.Abs(playerRB.velocity.x) >= max)
+            //ヒールアクション状態がアクション状態じゃないとき
+            if(nowHeelState != HEELACTION_STATE.action)
             {
-                playerRB.velocity = new Vector2(plMG.plVec.x * max, playerRB.velocity.y);
+                //移動
+                playerRB.AddForce(new Vector2(plMG.plVec.x, 0), ForceMode2D.Impulse);
+                //速度制限
+                if (Mathf.Abs(playerRB.velocity.x) >= max)
+                {
+                    playerRB.velocity = new Vector2(plMG.plVec.x * max, playerRB.velocity.y);
+                }
+                //移動方向を変化
+                playerRB.velocity = new Vector2(Mathf.Abs(playerRB.velocity.x) * plMG.plSeeVec.x, playerRB.velocity.y);
             }
-            //移動方向を変化
-            playerRB.velocity = new Vector2(Mathf.Abs(playerRB.velocity.x) * plMG.plSeeVec.x, playerRB.velocity.y);
+            //アクション状態の時
+            else
+            {
+                //落下アクションが一度も行われてないとき
+                if (!isHeelDrop)
+                {
+                    StartCoroutine(HeelDrop());
+                    isHeelDrop = true;
+                }
+            }
         }
 
         //ジャンプしてる　かつ　進行方向の壁に触れてる時
@@ -135,7 +177,22 @@ public class FootController : MonoBehaviour, PlayerInterface
 
     public void InputActionDown()
     {
-
+        //ヒール形態の時のみ
+        if (plMG.plData.nowMode == PlayerData.PLAYER_MODE.heel)
+        {
+            //現在のヒールアクション状態が待機状態の時
+            if (nowHeelState == HEELACTION_STATE.idle)
+            {
+                //ジャンプ状態に変更
+                nowHeelState = HEELACTION_STATE.jump;
+            }
+            //現在のヒールアクション状態がジャンプ状態の時
+            else if (nowHeelState == HEELACTION_STATE.jump && CheckHeight())
+            {
+                //アクション状態に変更
+                nowHeelState = HEELACTION_STATE.action;
+            }
+        }
     }
 
     public void InputAction()
@@ -148,6 +205,11 @@ public class FootController : MonoBehaviour, PlayerInterface
         isActionInput = false;  
     }
 
+    public void FormChange(Sprite _sprite)
+    {
+        Appearance.sprite = _sprite;
+    }
+
     /// <summary>
     /// 地面判定用
     /// </summary>
@@ -158,7 +220,7 @@ public class FootController : MonoBehaviour, PlayerInterface
         bool isGround = true;
 
         Vector2 down = -this.transform.up;          //プレイヤーの下方向ベクトル
-        float groundCheckDistance = 0.1f;
+        float groundCheckDistance = 0.05f;
 
         //真ん中
         Vector2 localBottom_center = colliderOffset + new Vector2(0, -colliderSize.y / 2f);
@@ -229,8 +291,78 @@ public class FootController : MonoBehaviour, PlayerInterface
         return isWall;
     }
 
-    public void FormChange(Sprite _sprite)
+    /// <summary>
+    /// ヒール形態のアクション
+    /// </summary>
+    private void HeelAction(Collision2D collision)
     {
-        Appearance.sprite = _sprite;
+        //接触したのが破壊可能オブジェクトの時
+        if (collision.collider.CompareTag("Ground"))
+        {
+            //タイルマップコンポーネントを取得できる時
+            if (collision.collider.gameObject.TryGetComponent<Tilemap>(out Tilemap targetTilemap))
+            {
+                // プレイヤー自身に付ける場合は判定不要
+                // 別オブジェクト用ならタグなどで判定
+                ContactPoint2D contact = collision.contacts[0];
+
+                // 接触したワールド座標
+                Vector3 hitPosition = contact.point;
+
+                // ワールド座標 → セル座標へ変換
+                Vector3Int cellPos = targetTilemap.WorldToCell(hitPosition);
+
+                // タイルが存在するなら削除
+                if (targetTilemap.HasTile(cellPos))
+                {
+                    targetTilemap.SetTile(cellPos, null);
+                    nowHeelState = HEELACTION_STATE.idle;
+                    isHeelDrop = false;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 地面とプレイヤーの距離が一定以上か調べる
+    /// </summary>
+    /// <returns>false=一定距離離れてない / true=離れてる</returns>
+    private bool CheckHeight()
+    {
+        float rayDistance = 1.5f;
+        Vector2 local_bottom = colliderOffset + new Vector2(0, -colliderSize.y / 2);
+        Vector2 bottom = transform.TransformPoint(local_bottom);
+        bool isHit = !Physics2D.Raycast(bottom, -this.transform.up, rayDistance, plMG.groundLayer);
+
+        return isHit;
+    }
+
+    /// <summary>
+    /// 落下アクション処理(非同期)
+    /// </summary>
+    private IEnumerator HeelDrop()
+    {
+        //速度を0にする
+        playerRB.velocity = Vector2.zero;
+        //一時的に物理挙動をなしにする
+        playerRB.bodyType = RigidbodyType2D.Kinematic;
+        //空中で待機
+        yield return new WaitForSeconds(0.5f);
+
+        //物理挙動を元に戻す
+        playerRB.bodyType = RigidbodyType2D.Dynamic;
+        //下に落下させる
+        playerRB.velocity = new Vector2(0, -10f);
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //ジャンプ後の着地時
+        if (nowHeelState == HEELACTION_STATE.action)
+        {
+            HeelAction(collision);
+        }
+        nowHeelState = HEELACTION_STATE.idle;
+        isHeelDrop = false;
     }
 }
