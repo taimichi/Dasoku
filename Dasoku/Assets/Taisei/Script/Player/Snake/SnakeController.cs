@@ -44,6 +44,9 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
 
         //開始時のプレイヤーの向いてる方向を設定
         plMG.PlayerDirection(this.transform ,plMG.nowDire);
+
+        startArrowRot = rotArrow.localEulerAngles;
+        arrows.SetActive(false);
     }
 
     public void PlUpdate()
@@ -60,6 +63,7 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
         //蛇手のアクション状態が待機状態じゃないとき
         else
         {
+            SnakeHandAction();
             return;
         }
         
@@ -119,40 +123,49 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
 
     public void InputRight()
     {
-        //プレイヤーの右向きベクトルを取得
-        plMG.plVec = this.transform.right;
+        if(nowHandAction== HANDACTION_STATE.idle)
+        {
+            //プレイヤーの右向きベクトルを取得
+            plMG.plVec = this.transform.right;
 
-        //x
-        NumTolerance(plMG.plVec.x);
-        plMG.plVec.x = (float)Math.Truncate(plMG.plVec.x * 100f + 1e-6f) / 100f;
-        //y
-        NumTolerance(plMG.plVec.y);
-        plMG.plVec.y = (float)Math.Truncate(plMG.plVec.y * 100f + 1e-6f) / 100f;
+            //x
+            NumTolerance(plMG.plVec.x);
+            plMG.plVec.x = (float)Math.Truncate(plMG.plVec.x * 100f + 1e-6f) / 100f;
+            //y
+            NumTolerance(plMG.plVec.y);
+            plMG.plVec.y = (float)Math.Truncate(plMG.plVec.y * 100f + 1e-6f) / 100f;
 
-        //向いてる方向を右に変更
-        plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.right);
+            //向いてる方向を右に変更
+            plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.right);
+        }
     }
 
     public void InputLeft()
     {
-        //プレイヤーの左向きベクトルを取得
-        plMG.plVec = -this.transform.right;
+        if (nowHandAction == HANDACTION_STATE.idle)
+        {
+            //プレイヤーの左向きベクトルを取得
+            plMG.plVec = -this.transform.right;
 
-        //plVecのx、yの数値がそれぞれ0.00001未満なら0として扱う
-        //x
-        NumTolerance(plMG.plVec.x);
-        plMG.plVec.x = (float)Math.Truncate(plMG.plVec.x * 100f + 1e-6f) / 100f;
-        //y
-        NumTolerance(plMG.plVec.y);
-        plMG.plVec.y = (float)Math.Truncate(plMG.plVec.y * 100f + 1e-6f) / 100f;
+            //plVecのx、yの数値がそれぞれ0.00001未満なら0として扱う
+            //x
+            NumTolerance(plMG.plVec.x);
+            plMG.plVec.x = (float)Math.Truncate(plMG.plVec.x * 100f + 1e-6f) / 100f;
+            //y
+            NumTolerance(plMG.plVec.y);
+            plMG.plVec.y = (float)Math.Truncate(plMG.plVec.y * 100f + 1e-6f) / 100f;
 
-        //向いてる方向を左に変更
-        plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.left);
+            //向いてる方向を左に変更
+            plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.left);
+        }
     }
 
     public void InputLRUp()
     {
-        playerRB.velocity = Vector2.zero;   
+        if (nowHandAction == HANDACTION_STATE.idle)
+        {
+            playerRB.velocity = Vector2.zero;
+        }
     }
 
     public void NoInputLR()
@@ -180,7 +193,7 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
 
             //蛇手
             case PlayerData.PLAYER_MODE.snakeHand:
-                if (!isRot)
+                if (!isRot && CheckGround())
                 {
                     //待機状態の時
                     if(nowHandAction == HANDACTION_STATE.idle)
