@@ -41,9 +41,10 @@ public partial class SnakeController : MonoBehaviour
     private float arrowRotAmount = 0f;
     //+回転か-回転か
     private bool isArrowRot = false;
-
+    //グラップルを使ってるかどうか
     private bool isGrapple = false;
 
+    private Vector3[] points = new Vector3[2];    
     
     /// <summary>
     /// 蛇手のアクション
@@ -100,6 +101,18 @@ public partial class SnakeController : MonoBehaviour
                 break;
 
             case HANDACTION_STATE.move:
+
+                //LineRenderer有効化
+                line.enabled = true;
+
+                Vector3 playreDown = -this.transform.up * 0.3f;
+                Vector3 handDown = -Appearance.transform.up * 0.3f;
+
+                points[0] = this.transform.position + playreDown;
+                points[1] = Appearance.transform.position + handDown;
+                line.positionCount = 2;
+                line.SetPositions(points);
+
                 //グラップル非発動
                 if (!isGrapple)
                 {
@@ -111,16 +124,22 @@ public partial class SnakeController : MonoBehaviour
                         //矢印の方向に手を移動させる
                         Vector2 pos = arrowDire * handSpeed * Time.deltaTime;
                         Appearance.transform.position += (Vector3)pos;
+
+                        Vector3 r = rotArrow.localEulerAngles;
+                        r.z += 90;
+                        //手の向きを矢印の方向と同じに
+                        Appearance.transform.localEulerAngles = r;
                     }
                     //当たった時
                     else
                     {
+                        isGrapple = true;
+
                         //スプリングジョイント有効化
                         joint.enabled = true;
 
                         //接続アンカーの位置を手が当たった位置に設定
                         joint.connectedAnchor = Appearance.transform.position;
-                        isGrapple = true;
                         return;
                     }
 
@@ -173,6 +192,7 @@ public partial class SnakeController : MonoBehaviour
 
         isGrapple = false;
         joint.enabled = false;
+        line.enabled = false;
 
         //ハンドアクション終わり
         nowHandAction = HANDACTION_STATE.idle;
