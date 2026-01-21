@@ -104,7 +104,4 @@ public partial class SnakeController : MonoBehaviour
             isStartFall = false;
         }
     }
-
-
-
 }

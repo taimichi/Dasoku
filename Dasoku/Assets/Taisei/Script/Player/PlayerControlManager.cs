@@ -33,7 +33,7 @@ public class PlayerControlManager : MonoBehaviour
     //プレイヤーの移動方向
     [System.NonSerialized] public Vector2 plVec;
     //プレイヤーの見ている方向
-    public Vector2 plSeeVec;
+    [System.NonSerialized] public Vector2 plSeeVec;
 
     //保存されてるプレイヤーの形態
     [System.NonSerialized] public PlayerData.PLAYER_MODE saveMode;

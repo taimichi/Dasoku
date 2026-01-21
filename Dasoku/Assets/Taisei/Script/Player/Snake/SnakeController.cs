@@ -73,13 +73,16 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
             return;
         }
 
-        //‰ñ“]’†‚¶‚á‚È‚­A’n–Ê‚ÆG‚ê‚Ä‚é
-        if (!CheckNowRotate(limitRot, this.transform.localEulerAngles.z))
+        if(nowStrongArm == STRONGARM_STATE.idle)
         {
-            if (nowRot != PlayerRot_Mode.rot)
+            //‰ñ“]’†‚¶‚á‚È‚­A’n–Ê‚ÆG‚ê‚Ä‚é
+            if (!CheckNowRotate(limitRot, this.transform.localEulerAngles.z))
             {
-                //‰ñ“]‚·‚é‚©‚Ì”»’è
-                CheckRotate();
+                if (nowRot != PlayerRot_Mode.rot)
+                {
+                    //‰ñ“]‚·‚é‚©‚Ì”»’è
+                    CheckRotate();
+                }
             }
         }
 
@@ -210,6 +213,10 @@ public partial class SnakeController : MonoBehaviour, PlayerInterface
 
             //„˜r
             case PlayerData.PLAYER_MODE.strongArm:
+                if (!isRot)
+                {
+                    StrongArmAction();
+                }
                 break;
         }
     }
