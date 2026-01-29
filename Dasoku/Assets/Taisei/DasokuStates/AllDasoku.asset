@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 412c4da44a4d45947abd809c686ea81f, type: 3}
+  m_Name: AllDasoku
+  m_EditorClassIdentifier: 
+  dasokuKinds:
+  - {fileID: 11400000, guid: 7bf94c140003b6b459188b9d4c4f05fe, type: 2}
+  - {fileID: 11400000, guid: b9437044b889a96458414c0f50222f65, type: 2}
+  - {fileID: 11400000, guid: 373c271ae962398458eb654dcbb76c41, type: 2}
+  - {fileID: 11400000, guid: 3ee94832060df45448396f68a90e3fc6, type: 2}
+  - {fileID: 11400000, guid: d8203da5267d7304b86f17f40e33a8b5, type: 2}
+  - {fileID: 11400000, guid: 73030137e12c4124cbe2b4e62da0c49b, type: 2}
+  - {fileID: 11400000, guid: 8e96dbfa0246dc24cabc209bb0164cdc, type: 2}
+  - {fileID: 11400000, guid: 00f600a69e2a3b9458f20807ea842abb, type: 2}
+  - {fileID: 11400000, guid: 1f42f3597cffd8d4d862b90cbdcffdbd, type: 2}
+  - {fileID: 11400000, guid: f64207373f67e424da7f00e9c5c15dc3, type: 2}
+  - {fileID: 11400000, guid: 38869f11dcc958c40adb6759823680d2, type: 2}
+  - {fileID: 11400000, guid: d2d0c83f7e0d1f042bb7560b4a380e1a, type: 2}
+  - {fileID: 11400000, guid: cb4750ea9cac8e04bb5f0353e45e68c8, type: 2}
+  - {fileID: 11400000, guid: b8677ab2292698244b8ec1676a074041, type: 2}
+  - {fileID: 11400000, guid: 0ea938fe51fcca447ae07db33e67a6d9, type: 2}
+  - {fileID: 11400000, guid: d4235b808e013004e81981f47fc8307d, type: 2}
+  - {fileID: 11400000, guid: d484bd08f906c1b4a892c2b6033c5348, type: 2}
+  - {fileID: 11400000, guid: 120d7355cb49b2f499e599f6cff1add8, type: 2}
+  - {fileID: 11400000, guid: b8fbccbc512df324a9f791c483f3cb0f, type: 2}
+  - {fileID: 11400000, guid: 9ede20ad7692cc44faae20b9dd5a1797, type: 2}

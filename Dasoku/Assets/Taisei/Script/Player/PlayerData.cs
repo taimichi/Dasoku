@@ -9,24 +9,39 @@ public class PlayerData : MonoBehaviour
     [Header("プレイヤーステータス")]
     //基礎速度
     [Tooltip("基礎速度")]
-    public float moveSpeed;
+    [SerializeField] private float basicMoveSpeed = 2;
+    //現在の速度
+    [System.NonSerialized] public float moveSpeed;
     //速度上限
     [SerializeField, Tooltip("速度上限")]
     public Vector2 maxVelocity = new Vector2(20, 20);
+
     //回転速度
     [Tooltip("1秒に回転する角度")]
-    public float RotSpeed;
+    [SerializeField]private float basicRotSpeed = 180;
+    //現在の回転速度
+    [System.NonSerialized] public float RotSpeed;
+
+    //速度倍率
+    [Tooltip("速度倍率")]
+    public float speedMultiplier = 1f;
+
     //胴体の数
     [Tooltip("胴体の数")]
     public int bodyNum = 4;
+
     //現在の形態
     public PLAYER_MODE nowMode = PLAYER_MODE.snake;
+
     //現在使用しているプレイヤースクリプトスクリプト
     [System.NonSerialized]
     public PLAYER_CONTROL nowControl = PLAYER_CONTROL.snake;
+
     //現在のプレイヤーの体
     [System.NonSerialized]
     public PLAYER_BODYTYPE nowBodyType = PLAYER_BODYTYPE.snake;
+    
+    //現在のプレイヤーのゲームオブジェクト
     [System.NonSerialized]
     public GameObject nowBody;
     #endregion
@@ -67,9 +82,9 @@ public class PlayerData : MonoBehaviour
         snake,          //plScript[0] SnakeController
         snakeReg,       //plScript[1] SnakeRegController
         foot,           //plScript[2] FootController
-        ouroboros,      //
-        quetzalcoatl,   //
-        snakeGod        //
+        ouroboros,      //plScript[3] OuroborosController
+        quetzalcoatl,   //plScript[4] QuetzalcoatlController
+        snakeGod        //plScript[5] SnakeGodController
     }
     //各プレイヤースクリプトの配列
     public MonoBehaviour[] plScripts;
@@ -85,10 +100,6 @@ public class PlayerData : MonoBehaviour
     }
     //各形態ごとの構造体配列
     public PLAYER_STATE[] States;
-
-    private float basicMoveSpeed = 2;
-
-    private float basicRotSpeed = 180;
 
     //胴体の最低数
     private const int MIN_BODYNUM = 3;
@@ -109,8 +120,14 @@ public class PlayerData : MonoBehaviour
     /// <param name="_amount">速度の倍率</param>
     public void SpeedChange(float _amount)
     {
-        moveSpeed = basicMoveSpeed * _amount;
-        RotSpeed = basicRotSpeed * _amount;
+        //速度倍率を変更
+        speedMultiplier = _amount;
+
+        //各速度を変更
+        //移動速度
+        moveSpeed = basicMoveSpeed * speedMultiplier;
+        //回転速度
+        RotSpeed = basicRotSpeed * speedMultiplier;
     }
 
     /// <summary>

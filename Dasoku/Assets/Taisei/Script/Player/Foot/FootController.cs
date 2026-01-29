@@ -68,13 +68,13 @@ public class FootController : MonoBehaviour, PlayerInterface
                 //移動時のジャンプ力
                 float moveJumpPower = 1f;
                 //移動
-                playerRB.AddForce(new Vector2(plMG.plVec.x, 0), ForceMode2D.Impulse);
+                playerRB.AddForce(new Vector2(plMG.plVec.x * plMG.plData.moveSpeed, 0), ForceMode2D.Impulse);
 
                 //ジャンプ処理
                 //通常
                 if (!isActionInput)
                 {
-                    playerRB.AddForce(new Vector2(plMG.plVec.x, moveJumpPower), ForceMode2D.Impulse);
+                    playerRB.AddForce(new Vector2(0, moveJumpPower), ForceMode2D.Impulse);
                 }
                 //アクション(大ジャンプ)
                 else
@@ -134,6 +134,7 @@ public class FootController : MonoBehaviour, PlayerInterface
 
     }
 
+    #region 入力処理
     public void InputRight()
     {
         //プレイヤーの右向きベクトルを取得
@@ -165,15 +166,32 @@ public class FootController : MonoBehaviour, PlayerInterface
     public void InputLRUp()
     {
         playerRB.velocity = new Vector2(0, playerRB.velocity.y);
-    }
 
-    public void NoInputLR()
-    {
-        //ベクトルを0に
-        plMG.plVec = Vector2.zero;
         //向いてる方向をどちらも向いてない状態に
         plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.normal);
     }
+
+    public void NoInput()
+    {
+        //ベクトルを0に
+        plMG.plVec = Vector2.zero;
+    }
+
+    public void InputUp()
+    {
+
+    }
+
+    public void InputDown()
+    {
+
+    }
+
+    public void InputUDUp()
+    {
+
+    }
+
 
     public void InputActionDown()
     {
@@ -204,6 +222,7 @@ public class FootController : MonoBehaviour, PlayerInterface
     {
         isActionInput = false;  
     }
+    #endregion
 
     public void FormChange(Sprite _sprite)
     {

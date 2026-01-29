@@ -28,6 +28,16 @@ public partial class SnakeRegController : MonoBehaviour
         }
 
         bodySpriteRenderer = body.GetComponent<SpriteRenderer>();
+
+        if (plMG.plData.nowMode == PlayerData.PLAYER_MODE.snakeReg)
+        {
+            AnimChange("isPro", false);
+        }
+        else if (plMG.plData.nowMode == PlayerData.PLAYER_MODE.snakeReg_Pro)
+        {
+            AnimChange("isPro", true);
+        }
+
     }
 
     private void BodySet(int _index)

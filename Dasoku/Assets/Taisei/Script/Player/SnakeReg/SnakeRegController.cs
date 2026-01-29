@@ -13,11 +13,19 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
     private Vector2 colliderSize;
     private Vector2 colliderOffset;
 
+    [Header("ジャンプ力")]
     //ジャンプ力
     [SerializeField] private float jumpPower = 10;
 
+    [Header("見た目用")]
     //見た目用
+    //頭
     [SerializeField] private SpriteRenderer HeadSpriteRenderer;
+
+    //アニメーター
+    [SerializeField] private Animator[] animator;
+
+
 
     void Start()
     {
@@ -28,8 +36,6 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
         plCollider = this.GetComponent<BoxCollider2D>();
         colliderSize = plCollider.size;
         colliderOffset = plCollider.offset;
-
-        plMG.plData.SpeedChange(1.0f);
 
         StartBodySet();
     }
@@ -43,6 +49,7 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
 
     }
 
+    #region 入力処理
     public void InputRight()
     {
         //プレイヤーの右向きベクトルを取得
@@ -55,6 +62,9 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
 
         //向いてる方向を右に変更
         plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.right);
+
+        //歩くモーションに
+        AnimChange("isMove", true);
     }
 
     public void InputLeft()
@@ -69,21 +79,42 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
 
         //向いてる方向を左に変更
         plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.left);
+
+        AnimChange("isMove", true);
     }
 
     public void InputLRUp()
     {
         //速度を0に
         playerRB.velocity = Vector2.zero;
-    }
 
-    public void NoInputLR()
-    {
-        //ベクトルを0に
-        plMG.plVec = Vector2.zero;
+        AnimChange("isMove" ,false);
+
         //向いてる方向をどちらも向いてない状態に
         plMG.PlayerDirection(this.transform, PlayerControlManager.PlayerDire_Mode.normal);
     }
+
+    public void NoInput()
+    {
+        //ベクトルを0に
+        plMG.plVec = Vector2.zero;
+    }
+
+    public void InputUp()
+    {
+
+    }
+
+    public void InputDown()
+    {
+
+    }
+
+    public void InputUDUp()
+    {
+
+    }
+
 
     public void InputActionDown()
     {
@@ -102,32 +133,40 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
     {
 
     }
+    #endregion
+
+    /// <summary>
+    /// アニメーション変更
+    /// </summary>
+    /// <param name="_trigger">false=待機モーション / true=歩くモーション</param>
+    private void AnimChange(string _para ,bool _trigger)
+    {
+        for(int i = 0; i < animator.Length; i++)
+        {
+            animator[i].SetBool(_para, _trigger);
+        }
+    }
 
     /// <summary>
     /// プレイヤーの移動処理
     /// </summary>
     private void PlayerMove()
     {
-        //プレイヤー移動処理
         //現在のプレイヤーの速度を取得
         Vector2 newPLVelo = playerRB.velocity;
 
-        //横移動の時
-        if (plMG.plVec.x != 0)
-        {
-            //移動速度を計算
-            newPLVelo.x = plMG.plVec.x * plMG.plData.moveSpeed;
+        //移動速度を計算
+        newPLVelo.x = plMG.plVec.x * plMG.plData.moveSpeed;
 
-            //速度が上限を超えた時
-            if (newPLVelo.x > plMG.plData.maxVelocity.x)
-            {
-                //上限速度に設定
-                newPLVelo.x = plMG.plData.maxVelocity.x;
-            }
+        //速度が上限を超えた時
+        if (Mathf.Abs(newPLVelo.x) > plMG.plData.maxVelocity.x)
+        {
+            //上限速度に設定
+            newPLVelo.x = plMG.plData.maxVelocity.x * plMG.plVec.x;
         }
 
         //ジャンプしてる　かつ　進行方向の壁に触れてる時
-        if(!CheckGround() && CheckWall())
+        if (!CheckGround() && CheckWall())
         {
             //壁と当たった時ずり落ちるようにするため、velocity.xを0にする
             newPLVelo.x = 0;

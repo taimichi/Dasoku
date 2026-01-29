@@ -6,6 +6,24 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 2cda990e2423bbf4892e6590ba056729
+    path: Assets/Taisei/Scene/Title.unity
+    guid: a35ccf87f9715fd4680acb53eb151433
+  - enabled: 1
+    path: Assets/Taisei/Scene/StageSelect.unity
+    guid: 3fc4c76a8fc55c04dac1cdc6318eecdb
+  - enabled: 1
+    path: Assets/Taisei/Scene/Tutorial.unity
+    guid: 14201755b97f0f74ca310da35fea8676
+  - enabled: 1
+    path: Assets/Scenes/StageScene.unity
+    guid: 1fd2bf1bdb2496948937113096be4cb3
+  - enabled: 1
+    path: Assets/Scenes/StageScene2.unity
+    guid: 5b58e99244c34d949b0a547b19440ce4
+  - enabled: 1
+    path: Assets/Scenes/StageScene3.unity
+    guid: db3055c78b8869847a9772ff4a8173e5
+  - enabled: 1
+    path: Assets/Scenes/StageScene4.unity
+    guid: aaec8562b26dd1945a4932edd5985e93
   m_configObjects: {}

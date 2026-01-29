@@ -7,6 +7,8 @@ public class GameManager : MonoBehaviour
     //タイルマップのコライダー
     public CompositeCollider2D[] composite;
 
+    public bool isClear = false;
+
     private void Awake()
     {
         if(Instance == null)
@@ -15,29 +17,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        isClear = false;
+    }
+
     private void Update()
     {
-        #region デバッグ用
-        //形態変化
-        if (Input.GetKeyDown(KeyCode.H))
-        {
-            PlayerData.Instance.nowMode = PlayerData.PLAYER_MODE.snakeHand;
-        }
-        else if (Input.GetKeyDown(KeyCode.N))
-        {
-            PlayerData.Instance.nowMode = PlayerData.PLAYER_MODE.snake;
-        }
 
-        //胴体の数変更
-        if (Input.GetKeyDown(KeyCode.UpArrow))
-        {
-            PlayerData.Instance.BodyNumChange(1);
-        }
-        else if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            PlayerData.Instance.BodyNumChange(-1);
-        }
-        #endregion
     }
 
     private void OnDrawGizmos()

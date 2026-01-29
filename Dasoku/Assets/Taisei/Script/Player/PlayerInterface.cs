@@ -28,7 +28,25 @@ public interface PlayerInterface
     /// </summary>
     void InputLRUp();
 
-    void NoInputLR();
+    /// <summary>
+    /// 移動キーが押されてないとき
+    /// </summary>
+    void NoInput();
+
+    /// <summary>
+    /// 上方向のキーが押されたとき
+    /// </summary>
+    void InputUp();
+
+    /// <summary>
+    /// 下方向のキーが押されたとき
+    /// </summary>
+    void InputDown();
+
+    /// <summary>
+    /// 上下キーどちらかを離したとき
+    /// </summary>
+    void InputUDUp();
 
     /// <summary>
     /// アクションキーが押されたとき
