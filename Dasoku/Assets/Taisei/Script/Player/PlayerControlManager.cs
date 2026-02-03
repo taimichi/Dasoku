@@ -140,6 +140,7 @@ public partial class PlayerControlManager : MonoBehaviour
             return;
         }
 
+        //ƒƒjƒ…[ŠJ‚¢‚Ä‚é‚Í‘€ì‚È‚µ‚É
         if (GM.isMenu)
         {
             return;
