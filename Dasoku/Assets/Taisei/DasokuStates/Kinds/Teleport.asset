@@ -17,7 +17,7 @@ MonoBehaviour:
     name: "\u30EF\u30FC\u30D7"
     explanation: "\u30E9\u30F3\u30C0\u30E0\u306A\u4F4D\u7F6E\u306B\u30EF\u30FC\u30D7\u3059\u308B"
     isAppearance: 0
-    probability: 0
+    probability: 300
   KeyPrefab: {fileID: 0}
   deleteType: 0
   changeMoveSpeed: 1

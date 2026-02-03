@@ -104,6 +104,11 @@ public class SnakeGodController : MonoBehaviour, PlayerInterface
     }
     #endregion
 
+    public bool CheckStandGround()
+    {
+        return true;
+    }
+
     public void FormChange(Sprite _sprite)
     {
 

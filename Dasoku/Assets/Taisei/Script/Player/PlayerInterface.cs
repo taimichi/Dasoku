@@ -62,4 +62,10 @@ public interface PlayerInterface
     /// アクションキーを話したとき
     /// </summary>
     void InputActionUp();
+
+    /// <summary>
+    /// 地面に立っているかどうか
+    /// </summary>
+    /// <returns>false=立ってない / true=立ってる</returns>
+    bool CheckStandGround();
 }

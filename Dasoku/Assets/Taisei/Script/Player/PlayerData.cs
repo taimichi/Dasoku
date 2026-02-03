@@ -30,6 +30,10 @@ public class PlayerData : MonoBehaviour
     [Tooltip("胴体の数")]
     public int bodyNum = 4;
 
+    //蛇足ゲージの増加速度倍率
+    [Tooltip("蛇足ゲージの増加速度倍率")]
+    public float meterSpeed = 1;
+
     //現在の形態
     public PLAYER_MODE nowMode = PLAYER_MODE.snake;
 
@@ -93,6 +97,9 @@ public class PlayerData : MonoBehaviour
     [System.Serializable]
     public struct PLAYER_STATE
     {
+        public string name;                 //形態の名前
+        [TextArea(3, 5)]
+        public string explanation;          //形態の説明
         public PLAYER_MODE mode;            //形態
         public Sprite headSprite;           //頭のスプライト
         public PLAYER_CONTROL control;      //コントローラースクリプト
@@ -128,6 +135,15 @@ public class PlayerData : MonoBehaviour
         moveSpeed = basicMoveSpeed * speedMultiplier;
         //回転速度
         RotSpeed = basicRotSpeed * speedMultiplier;
+    }
+
+    /// <summary>
+    /// 蛇足ゲージの増加速度倍率を変更
+    /// </summary>
+    /// <param name="_amount">新しい速度倍率</param>
+    public void MeterSpeedChange(float _amount)
+    {
+        meterSpeed = _amount;
     }
 
     /// <summary>

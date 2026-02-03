@@ -21,6 +21,8 @@ public class SnakeBody : MonoBehaviour
     //座標の履歴
     private List<Vector3> posHistory = new List<Vector3>();
 
+    private int saveNum = 0;
+
     /// <summary>
     /// 保持する履歴の最大数
     /// </summary>
@@ -48,13 +50,14 @@ public class SnakeBody : MonoBehaviour
             //胴体の生成
             AddSegment();
 
-            //最後の胴体追加の時
-            if (i == PlData.bodyNum - 1)
-            {
-                //最後の胴体はしっぽのため、名前変更
-                segments[i].name = "Tail";
-            }
+            ////最後の胴体追加の時
+            //if (i == PlData.bodyNum - 1)
+            //{
+            //    //最後の胴体はしっぽのため、名前変更
+            //    segments[i].name = "Tail";
+            //}
         }
+        saveNum = PlData.bodyNum - 1;
     }
 
     void Update()
@@ -62,6 +65,15 @@ public class SnakeBody : MonoBehaviour
         //胴体の見た目更新
         RecordPosition();
         UpdateSegments();
+
+        if(saveNum != PlData.bodyNum)
+        {
+            for(int i = 0; i < PlData.bodyNum - saveNum; i++)
+            {
+                AddSegment();
+            }
+            saveNum = PlData.bodyNum;
+        }
     }
 
     /// <summary>

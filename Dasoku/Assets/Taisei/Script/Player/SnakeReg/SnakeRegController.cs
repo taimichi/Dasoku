@@ -21,11 +21,14 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
     //見た目用
     //頭
     [SerializeField] private SpriteRenderer HeadSpriteRenderer;
+    //足
+    [SerializeField] private SpriteRenderer[] RegSpriteRenderer;
+    [SerializeField] private Sprite[] regSprite;
 
     //アニメーター
     [SerializeField] private Animator[] animator;
 
-
+    private bool isTest = false;
 
     void Start()
     {
@@ -135,6 +138,11 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
     }
     #endregion
 
+    public bool CheckStandGround()
+    {
+        return CheckGround();
+    }
+
     /// <summary>
     /// アニメーション変更
     /// </summary>
@@ -175,27 +183,27 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
         //velocity変更
         playerRB.velocity = newPLVelo;
 
-        //ジャンプしてないとき
-        if (CheckGround())
-        {
-            //前方に0.5マスブロックがあるとき
-            if (CheckHalfBlock())
-            {
-                //コライダーの右下の座標
-                Vector2 local_rightBottom = colliderOffset + new Vector2(colliderSize.x / 2f, -colliderSize.y / 2f);
-                Vector2 rightBottom = transform.TransformPoint(local_rightBottom);
-                //コライダーの右端の座標
-                Vector2 local_right = colliderOffset + new Vector2(colliderSize.x / 2f, 0);
-                Vector2 right = transform.TransformPoint(local_right);
+        ////ジャンプしてないとき
+        //if (CheckGround())
+        //{
+        //    //前方に0.5マスブロックがあるとき
+        //    if (CheckHalfBlock())
+        //    {
+        //        //コライダーの右下の座標
+        //        Vector2 local_rightBottom = colliderOffset + new Vector2(colliderSize.x / 2f, -colliderSize.y / 2f);
+        //        Vector2 rightBottom = transform.TransformPoint(local_rightBottom);
+        //        //コライダーの右端の座標
+        //        Vector2 local_right = colliderOffset + new Vector2(colliderSize.x / 2f, 0);
+        //        Vector2 right = transform.TransformPoint(local_right);
 
-                Vector2 offset = right - rightBottom;
+        //        Vector2 offset = right - rightBottom;
 
-                Vector2 startPos = right;
-                Vector2 endPos = plMG.GM.GetNearestCorner(right) + offset;
+        //        Vector2 startPos = right;
+        //        Vector2 endPos = plMG.GM.GetNearestCorner(right) + offset;
 
-                this.transform.position = Vector2.Lerp(startPos, endPos, 1);
-            }
-        }
+        //        this.transform.position = Vector2.Lerp(startPos, endPos, 1);
+        //    }
+        //}
 
     }
 
@@ -288,25 +296,19 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
     {
         float rayDistance = 0.2f;
 
-        //上判定
-        Vector2 up_local = colliderOffset + new Vector2(colliderSize.x / 2f, colliderSize.y / 2.5f);
-        Vector2 up = transform.TransformPoint(up_local);
         //下判定
         Vector2 down_local = colliderOffset + new Vector2(colliderSize.x / 2f, -colliderSize.y / 2.5f);
         Vector2 down = transform.TransformPoint(down_local);
 
-        //上判定のレイ
-        bool isUp = Physics2D.Raycast(up, plMG.plSeeVec, rayDistance, plMG.groundLayer);
         //下判定のレイ
         bool isDown = Physics2D.Raycast(down, plMG.plSeeVec, rayDistance, plMG.groundLayer);
 
         #region デバッグ用_レイ表示
-        Debug.DrawRay(up, plMG.plSeeVec * rayDistance, Color.yellow);
         Debug.DrawRay(down, plMG.plSeeVec * rayDistance, Color.yellow);
         #endregion
 
-        //どちらかのみが地面に触れてる時
-        if (isUp ^ isDown)
+        //地面に触れてる時
+        if (isDown)
         {
             return true;
         }
@@ -318,5 +320,11 @@ public partial class SnakeRegController : MonoBehaviour, PlayerInterface
     {
         //見た目変更
         HeadSpriteRenderer.sprite = _sprite;
+
+        if (isTest)
+        {
+            RegChange();
+        }
+        isTest = true;
     }
 }

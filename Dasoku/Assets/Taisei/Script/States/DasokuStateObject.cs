@@ -30,6 +30,38 @@ public class DasokuStateObject : ScriptableObject
         all     //全部
     }
 
+    /// <summary>
+    /// 移動速度倍率の種類
+    /// </summary>
+    public enum DASOKUSTATE_MOVESPEED
+    {
+        up,
+        up_more,
+        up_most,
+        down,
+        down_more
+    }
+
+    /// <summary>
+    /// メーター速度倍率の種類
+    /// </summary>
+    public enum DASOKUSTATE_METERSPEED
+    {
+        up,
+        up_more,
+        down
+    }
+
+    /// <summary>
+    /// 胴体追加の種類
+    /// </summary>
+    public enum DASOKUSTATE_ADDBODY
+    {
+        add_1,
+        add_2,
+        add_3
+    }
+
     [System.Serializable]
     /// <summary>
     /// 共通変数
@@ -46,7 +78,7 @@ public class DasokuStateObject : ScriptableObject
         [Tooltip("1度出現したかどうか")]
         public bool isAppearance;       //1度出現したかどうか
         [Tooltip("出現確率")]
-        public float probability;       //出現確率
+        public int probability;         //出現確率
     }
     [Header("共通項目")]
     //共通変数の構造体
@@ -60,15 +92,24 @@ public class DasokuStateObject : ScriptableObject
     //蛇足解除の種類
     public DASOKUSTATE_DELETE deleteType;
 
-    [Header("個別項目"), Tooltip("移動速度倍率")]
+    [Header("個別項目"), Tooltip("移動速度倍率の種類")]
+    public DASOKUSTATE_MOVESPEED moveType;
+
+    [Header("個別項目"), Tooltip("メーター速度倍率の種類")]
+    public DASOKUSTATE_METERSPEED meterType;
+
+    [Header("個別項目"), Tooltip("胴体追加の種類")]
+    public DASOKUSTATE_ADDBODY addBodyType;
+
+    [Tooltip("移動速度倍率")]
     //移動速度倍率
     public float changeMoveSpeed = 1;
 
-    [Header("個別項目"), Tooltip("メーター速度倍率")]
+    [Tooltip("メーター速度倍率")]
     //メーター速度倍率
     public float changeMeterSpeed = 1;
 
-    [Header("個別項目"), Tooltip("追加する胴体の数")]
+    [Tooltip("追加する胴体の数")]
     //追加する胴体の数
     public int addBodyNum = 0;
 }

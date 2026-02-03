@@ -33,3 +33,14 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 120d7355cb49b2f499e599f6cff1add8, type: 2}
   - {fileID: 11400000, guid: b8fbccbc512df324a9f791c483f3cb0f, type: 2}
   - {fileID: 11400000, guid: 9ede20ad7692cc44faae20b9dd5a1797, type: 2}
+  dasokuForms:
+  - kind: 1
+    probability: 1055
+  - kind: 3
+    probability: 700
+  - kind: 5
+    probability: 700
+  - kind: 8
+    probability: 2
+  - kind: 9
+    probability: 1

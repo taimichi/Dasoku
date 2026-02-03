@@ -17,9 +17,12 @@ MonoBehaviour:
     name: "\u920D\u5316\uFF0B"
     explanation: "\u79FB\u52D5\u901F\u5EA6\u304C0.5\u500D\u306B\u306A\u308B"
     isAppearance: 0
-    probability: 0
+    probability: 154
   KeyPrefab: {fileID: 0}
   deleteType: 0
+  moveType: 4
+  meterType: 0
+  addBodyType: 0
   changeMoveSpeed: 0.5
   changeMeterSpeed: 1
   addBodyNum: 0

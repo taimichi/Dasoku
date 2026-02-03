@@ -301,6 +301,11 @@ public class OuroborosController : MonoBehaviour, PlayerInterface
     }
     #endregion
 
+    public bool CheckStandGround()
+    {
+        return CheckGround();
+    }
+
     public void FormChange(Sprite _sprite)
     {
         //Œ©‚½–Ú•ÏX

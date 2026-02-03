@@ -3,8 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
-public class PlayerControlManager : MonoBehaviour
+public partial class PlayerControlManager : MonoBehaviour
 {
     public static PlayerControlManager Instance;
 
@@ -52,12 +53,29 @@ public class PlayerControlManager : MonoBehaviour
     //蛇足ゲージ関連
     //直前のプレイヤーの位置
     private Vector2 beforePos;
-    //移動距離
+    //移動時間
     private float gauge_distanceAmount = 0;
-    //ゲージマックスにかかる移動距離
-    [SerializeField] private float gauge_MaxDistance = 50;
+    //ゲージマックスにかかる移動移動時間
+    [SerializeField] private float gauge_MaxTime = 3;
 
     private List<Vector2> startOffset = new List<Vector2>();
+
+    //抽選用
+    private LotteryData lottery;
+
+    //煙幕のプレハブ
+    [SerializeField] private GameObject SmokePre;
+    //形態変化アニメーション中かどうか
+    private bool isFormChangeAnim = false;
+
+    [SerializeField] private CanvasGroup canvasGroup;
+    [SerializeField] private Text dasokuNameText;
+    [SerializeField] private Text dasokuEffectText;
+
+    //ウロボロス、ケツァルコアトル、蛇神に変化したかどうか
+    private bool isOuroboros = false;
+    private bool isQuetzalcoatl = false;
+    private bool isSnakeGod = false;
 
     private void Awake()
     {
@@ -80,6 +98,8 @@ public class PlayerControlManager : MonoBehaviour
         {
             plData = this.GetComponent<PlayerData>();
         }
+
+        lottery = LotteryData.LotteryEntity;
     }
 
     void Start()
@@ -104,28 +124,30 @@ public class PlayerControlManager : MonoBehaviour
 
         //蛇足ゲージを0に
         DasokuGauge.fillAmount = 0;
+
+        canvasGroup.alpha = 0;
+
+        DasokuReset();
     }
 
     void Update()
-    {
-        if (plData.nowMode != saveMode)
-        {
-            //形態を変更
-            ModeChange();
-
-            PlayerInterface pl = GetPlayerScript();
-            pl.FormChange(nowState.headSprite);
-        }
-
-    }
-
-    private void FixedUpdate()
     {
         //ゲームクリアしてる時はこれ以上処理を行わない
         if (GM.isClear)
         {
             Rigidbody2D rb = plData.nowBody.GetComponent<Rigidbody2D>();
             rb.velocity = Vector2.zero;
+            return;
+        }
+
+        if (GM.isMenu)
+        {
+            return;
+        }
+
+        //形態変更アニメーション中は以下の処理をやらない
+        if (isFormChangeAnim)
+        {
             return;
         }
 
@@ -147,22 +169,127 @@ public class PlayerControlManager : MonoBehaviour
         Vector3 plPos = plData.nowBody.transform.position;
         plCam.transform.position = new Vector3(plPos.x, plPos.y, plCam.transform.position.z);
 
-        //蛇足ゲージ処理
+        //蛇足ゲージの処理
+        GaugeUpdate();
+
+        //身体の数が8以上の時
+        if(plData.bodyNum >= 8 && !isOuroboros)
+        {
+            //ウロボロスに強制的に変化
+            plData.nowMode = PlayerData.PLAYER_MODE.ouroboros;
+            isOuroboros = true;
+        }
+
+        //形態が変化した時
+        if (plData.nowMode != saveMode)
+        {
+            isFormChangeAnim = true;
+            StartCoroutine(ChangeAnime(pl));
+
+        }
+
+    }
+
+    private IEnumerator ChangeAnime(PlayerInterface _nowPl)
+    {
+        //地面に触れてないときは形態変化をしない
+        while (!_nowPl.CheckStandGround())
+        {
+            yield return null;
+        }
+
+        //プレイヤーの速度を0に
+        Rigidbody2D _rb = plData.nowBody.GetComponent<Rigidbody2D>();
+        _rb.velocity = Vector2.zero;
+
+        //煙を出現させる位置を設定
+        Vector2 _pos;
+        if(plData.nowBodyType == PlayerData.PLAYER_BODYTYPE.snake)
+        {
+            GameObject _obj = GameObject.Find("Bodys");
+            int _childCount = _obj.transform.childCount;
+            _pos = _obj.transform.GetChild(_childCount / 2).position;
+        }
+        else
+        {
+            _pos = plData.nowBody.transform.position;
+        }
+
+        //煙の大きさを設定
+        Vector2 _size;
+        if(plData.bodyNum < 5)
+        {
+            _size = new Vector2(3, 3);
+        }
+        else
+        {
+            _size = new Vector2(4, 4);
+        }
+
+        //煙を生成
+        GameObject _smoke = Instantiate(SmokePre,_pos,Quaternion.identity);
+        _smoke.transform.localScale = _size;
+
+        //煙のアニメーター取得
+        Animator _anim = _smoke.GetComponent<Animator>();
+        //１フレーム待機
+        yield return null;
+
+        //煙のアニメーションの半分が経過するまで待機
+        while(_anim.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.5)
+        {
+            yield return null;
+        }
+
+        //形態を変更
+        ModeChange();
+
+        PlayerInterface newPl = GetPlayerScript();
+        newPl.FormChange(nowState.headSprite);
+
+        //テキストを変更
+        canvasGroup.alpha = 1;
+        dasokuNameText.text = nowState.name;
+        dasokuEffectText.text = nowState.explanation;
+
+        isFormChangeAnim = false;
+    }
+
+    /// <summary>
+    /// 蛇足ゲージの処理
+    /// </summary>
+    private void GaugeUpdate()
+    {
         //移動距離計算
         float dis = (float)Math.Truncate(Vector2.Distance(beforePos, plData.nowBody.transform.position) * 100) / 100;
         //移動距離が0より多いとき
         if (dis > 0)
         {
-            //移動量を加算
-            gauge_distanceAmount += dis;
-            //移動量が最大値を超えてたら、最大値を入れる
-            gauge_distanceAmount = Mathf.Min(gauge_distanceAmount, gauge_MaxDistance);
-            //移動量をもとにゲージを増やす
-            DasokuGauge.fillAmount = gauge_distanceAmount / gauge_MaxDistance;
+            //移動時間を加算
+            gauge_distanceAmount += Time.deltaTime * plData.meterSpeed;
+            //移動時間が最大値を超えてたら、最大値を入れる
+            gauge_distanceAmount = Mathf.Min(gauge_distanceAmount, gauge_MaxTime);
+            //移動時間をもとにゲージを増やす
+            DasokuGauge.fillAmount = gauge_distanceAmount / gauge_MaxTime;
+
+            if(plData.nowBody.transform.position.x >= 22 && CheckTutorial())
+            {
+                DasokuGauge.fillAmount = 1;
+            }
 
             //ゲージが最大になった時
             if (DasokuGauge.fillAmount >= 1)
             {
+                if (CheckTutorial())
+                {
+                    SpecialLottery_Form(PlayerData.PLAYER_MODE.snakeReg);
+                }
+                else
+                {
+                    //抽選処理
+                    LotteryFunction();
+                }
+
                 //ゲージ量、移動量を0に戻す
                 DasokuGauge.fillAmount = 0;
                 gauge_distanceAmount = 0;
@@ -170,7 +297,12 @@ public class PlayerControlManager : MonoBehaviour
         }
         //直前の位置を更新
         beforePos = plData.nowBody.transform.position;
+    }
 
+    private bool CheckTutorial()
+    {
+        bool _isTutorial = SceneManager.GetActiveScene().name == "Tutorial";
+        return _isTutorial;
     }
 
     /// <summary>

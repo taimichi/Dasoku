@@ -28,14 +28,17 @@ public class CustomInspector_DasokuState : Editor
                 break;
 
             case DasokuStateObject.DASOKUSTATE_KINDS.speedChange:
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("moveType"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("changeMoveSpeed"));
                 break;
 
             case DasokuStateObject.DASOKUSTATE_KINDS.meterSpeedChenge:
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("meterType"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("changeMeterSpeed"));
                 break;
 
             case DasokuStateObject.DASOKUSTATE_KINDS.addBody:
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("addBodyType"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("addBodyNum"));
                 break;
 

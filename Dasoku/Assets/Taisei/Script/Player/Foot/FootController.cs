@@ -58,7 +58,7 @@ public class FootController : MonoBehaviour, PlayerInterface
     private void PlayerMove()
     {
         //最高速度　仮
-        float max = 2;
+        float max = plMG.plData.maxVelocity.x;
         //地面と接してる時
         if (CheckGround())
         {
@@ -68,7 +68,7 @@ public class FootController : MonoBehaviour, PlayerInterface
                 //移動時のジャンプ力
                 float moveJumpPower = 1f;
                 //移動
-                playerRB.AddForce(new Vector2(plMG.plVec.x * plMG.plData.moveSpeed, 0), ForceMode2D.Impulse);
+                playerRB.velocity = new Vector2(plMG.plVec.x * plMG.plData.moveSpeed, playerRB.velocity.y);
 
                 //ジャンプ処理
                 //通常
@@ -104,7 +104,7 @@ public class FootController : MonoBehaviour, PlayerInterface
             if(nowHeelState != HEELACTION_STATE.action)
             {
                 //移動
-                playerRB.AddForce(new Vector2(plMG.plVec.x, 0), ForceMode2D.Impulse);
+                playerRB.velocity = new Vector2(plMG.plVec.x * plMG.plData.moveSpeed, playerRB.velocity.y);
                 //速度制限
                 if (Mathf.Abs(playerRB.velocity.x) >= max)
                 {
@@ -223,6 +223,11 @@ public class FootController : MonoBehaviour, PlayerInterface
         isActionInput = false;  
     }
     #endregion
+
+    public bool CheckStandGround()
+    {
+        return CheckGround();
+    }
 
     public void FormChange(Sprite _sprite)
     {

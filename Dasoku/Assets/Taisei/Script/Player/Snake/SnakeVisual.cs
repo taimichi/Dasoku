@@ -31,13 +31,12 @@ public class SnakeVisual : MonoBehaviour
         lineRenderer.positionCount = 0;
 
         nowLength = maxLength;
-
-        //プレイヤーの胴体の長さを取得
-        maxLength = controller.ReturnBodyNum();
     }
 
     void Update()
     {
+        maxLength = controller.ReturnBodyNum();
+
         plOffset = controller.ReturnPlayerDownVec() * downDistance;
 
         // --- 点追加 ---

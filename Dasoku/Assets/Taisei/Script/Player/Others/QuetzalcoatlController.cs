@@ -134,6 +134,12 @@ public class QuetzalcoatlController : MonoBehaviour, PlayerInterface
     }
     #endregion
 
+    public bool CheckStandGround()
+    {
+        return true;
+    }
+
+
     public void FormChange(Sprite _sprite)
     {
         AppearanceSpriteRenderer.sprite = _sprite;
